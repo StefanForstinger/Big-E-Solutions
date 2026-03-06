@@ -13,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseOracle(builder.Configuration.GetConnectionString("Default"),
         b => b.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19)));
+        
 
 // ── ASP.NET Identity (mit RoleManager) ───────────────────────────────────────
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
