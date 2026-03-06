@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projektplaner – Anmelden</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="logo-icon">🗓</div>
+      <h1>Projektplaner</h1>
+      <p>Berufsschule – Eigenentwicklung</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('login')">Anmelden</button>
+      <button class="tab-btn"        onclick="showTab('register')">Registrieren</button>
+    </div>
+
+    <!-- Login -->
+    <div id="tab-login">
+      <div class="form-group">
+        <label for="l-email">E-Mail</label>
+        <input id="l-email" type="email" placeholder="name@schule.at" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="l-pass">Passwort</label>
+        <input id="l-pass" type="password" placeholder="Passwort" autocomplete="current-password">
+      </div>
+      <button id="btn-login" class="btn btn-primary btn-full btn-lg" onclick="login()">
+        Einloggen
+      </button>
+      <div id="msg-login" class="alert alert-hidden"></div>
+    </div>
+
+    <!-- Register -->
+    <div id="tab-register" class="d-none">
+      <div class="form-group">
+        <label for="r-name">Vollständiger Name</label>
+        <input id="r-name" type="text" placeholder="Max Mustermann">
+      </div>
+      <div class="form-group">
+        <label for="r-email">E-Mail</label>
+        <input id="r-email" type="email" placeholder="name@schule.at">
+      </div>
+      <div class="form-group">
+        <label for="r-pass">Passwort <span class="text-muted">(min. 6 Zeichen, 1 Zahl)</span></label>
+        <input id="r-pass" type="password" placeholder="Passwort wählen">
+      </div>
+      <button id="btn-register" class="btn btn-success btn-full btn-lg" onclick="register()">
+        Konto erstellen
+      </button>
+      <div id="msg-register" class="alert alert-hidden"></div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    // Weiterleitung wenn bereits eingeloggt
+    if (isLoggedIn()) window.location.href = '/pages/dashboard.html';
+
+    function showTab(tab) {
+      document.getElementById('tab-login').classList.toggle('d-none',    tab !== 'login');
+      document.getElementById('tab-register').classList.toggle('d-none', tab !== 'register');
+      document.querySelectorAll('.tab-btn').forEach((b, i) =>
+        b.classList.toggle('active', (i === 0) === (tab === 'login')));
+      hideAlert('msg-login');
+      hideAlert('msg-register');
+    }
+
+    async function login() {
+      const email = document.getElementById('l-email').value.trim();
+      const pass  = document.getElementById('l-pass').value;
+      if (!email || !pass) { showAlert('msg-login', 'Bitte alle Felder ausfüllen.'); return; }
+
+      setLoading('btn-login', true);
+      try {
+        const res = await fetch('/api/auth/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email, password: pass })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setToken(data.token);
+          window.location.href = '/pages/dashboard.html';
+        } else {
+          showAlert('msg-login', data.error ?? 'Login fehlgeschlagen.');
+        }
+      } catch {
+        showAlert('msg-login', 'Server nicht erreichbar.');
+      } finally {
+        setLoading('btn-login', false);
+      }
+    }
+
+    async function register() {
+      const name  = document.getElementById('r-name').value.trim();
+      const email = document.getElementById('r-email').value.trim();
+      const pass  = document.getElementById('r-pass').value;
+
+      if (!name || !email || !pass) { showAlert('msg-register', 'Bitte alle Felder ausfüllen.'); return; }
+
+      setLoading('btn-register', true);
+      try {
+        const res = await fetch('/api/auth/register', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email, password: pass, fullName: name })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setToken(data.token);
+          window.location.href = '/pages/dashboard.html';
+        } else {
+          const errMsg = Array.isArray(data) ? data.map(e => e.description).join(' ') : 'Registrierung fehlgeschlagen.';
+          showAlert('msg-register', errMsg);
+        }
+      } catch {
+        showAlert('msg-register', 'Server nicht erreichbar.');
+      } finally {
+        setLoading('btn-register', false);
+      }
+    }
+
+    // Enter-Taste
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const registerVisible = !document.getElementById('tab-register').classList.contains('d-none');
+      registerVisible ? register() : login();
+    });
+  </script>
+</body>
+</html>
