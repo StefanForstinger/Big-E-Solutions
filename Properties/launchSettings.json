@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "ProjectPlanner": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:65406;http://localhost:65407"
+    }
+  }
+}
