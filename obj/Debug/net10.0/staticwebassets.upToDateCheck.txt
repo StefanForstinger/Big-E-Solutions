@@ -1,0 +1,10 @@
+wwwroot\css\style.css
+wwwroot\index.html
+wwwroot\js\api.js
+wwwroot\pages\dashboard.html
+wwwroot\pages\gantt.html
+C:\Users\raphael.wiesenberger\source\repos\Big-E-Solutions\wwwroot\css\style.css
+C:\Users\raphael.wiesenberger\source\repos\Big-E-Solutions\wwwroot\index.html
+C:\Users\raphael.wiesenberger\source\repos\Big-E-Solutions\wwwroot\js\api.js
+C:\Users\raphael.wiesenberger\source\repos\Big-E-Solutions\wwwroot\pages\dashboard.html
+C:\Users\raphael.wiesenberger\source\repos\Big-E-Solutions\wwwroot\pages\gantt.html

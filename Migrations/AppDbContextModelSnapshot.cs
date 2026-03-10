@@ -239,6 +239,11 @@ namespace ProjectPlanner.Migrations
 
                     OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("NVARCHAR2(20)");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(4000)
@@ -266,6 +271,21 @@ namespace ProjectPlanner.Migrations
                     b.ToTable("PROJECTS", "ADMIN");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Models.ProjectMember", b =>
+                {
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("NVARCHAR2(450)");
+
+                    b.HasKey("ProjectId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PROJECT_MEMBERS", "ADMIN");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Models.ProjectTask", b =>
                 {
                     b.Property<int>("Id")
@@ -275,13 +295,25 @@ namespace ProjectPlanner.Migrations
                     OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AssigneeId")
-                        .HasColumnType("NVARCHAR2(2000)");
+                        .HasColumnType("NVARCHAR2(450)");
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("TIMESTAMP(7)");
 
+                    b.Property<bool>("IsMilestone")
+                        .HasColumnType("NUMBER(1)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("NVARCHAR2(2000)");
+
                     b.Property<int?>("ParentId")
                         .HasColumnType("NUMBER(10)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("NVARCHAR2(10)");
 
                     b.Property<int>("Progress")
                         .HasColumnType("NUMBER(10)");
@@ -292,6 +324,11 @@ namespace ProjectPlanner.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("TIMESTAMP(7)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("NVARCHAR2(20)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -299,9 +336,79 @@ namespace ProjectPlanner.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssigneeId");
+
                     b.HasIndex("ProjectId");
 
                     b.ToTable("TASKS", "ADMIN");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.TaskComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("NUMBER(10)");
+
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuthorName")
+                        .HasColumnType("NVARCHAR2(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("NVARCHAR2(2000)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("NVARCHAR2(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TASK_COMMENTS", "ADMIN");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.TaskLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("NUMBER(10)");
+
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<int>("Target")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("NVARCHAR2(5)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("Source");
+
+                    b.HasIndex("Target");
+
+                    b.ToTable("TASK_LINKS", "ADMIN");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -366,15 +473,87 @@ namespace ProjectPlanner.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Models.ProjectMember", b =>
+                {
+                    b.HasOne("ProjectPlanner.Models.Project", "Project")
+                        .WithMany("Members")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Models.ProjectTask", b =>
                 {
+                    b.HasOne("ProjectPlanner.Models.AppUser", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("ProjectPlanner.Models.Project", "Project")
                         .WithMany("Tasks")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Assignee");
+
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.TaskComment", b =>
+                {
+                    b.HasOne("ProjectPlanner.Models.ProjectTask", "Task")
+                        .WithMany("Comments")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Task");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.TaskLink", b =>
+                {
+                    b.HasOne("ProjectPlanner.Models.Project", "Project")
+                        .WithMany("Links")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Models.ProjectTask", "SourceTask")
+                        .WithMany("LinksFrom")
+                        .HasForeignKey("Source")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Models.ProjectTask", "TargetTask")
+                        .WithMany("LinksTo")
+                        .HasForeignKey("Target")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("SourceTask");
+
+                    b.Navigation("TargetTask");
                 });
 
             modelBuilder.Entity("ProjectPlanner.Models.AppUser", b =>
@@ -384,7 +563,20 @@ namespace ProjectPlanner.Migrations
 
             modelBuilder.Entity("ProjectPlanner.Models.Project", b =>
                 {
+                    b.Navigation("Links");
+
+                    b.Navigation("Members");
+
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.ProjectTask", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("LinksFrom");
+
+                    b.Navigation("LinksTo");
                 });
 #pragma warning restore 612, 618
         }
