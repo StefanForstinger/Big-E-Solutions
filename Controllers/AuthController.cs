@@ -37,12 +37,26 @@ public class AuthController : ControllerBase
             Role     = "Student"           // Standardrolle
         };
 
+        var users = await _userManager.Users.ToListAsync();
+        if(users.Count == 0)
+        {
+            user.Role = "Admin"; // Erster registrierter Benutzer wird Admin
+        }
+
         var result = await _userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
-        await EnsureRoleExists("Student");
-        await _userManager.AddToRoleAsync(user, "Student");
+        if (users.Count == 0)
+        {
+            await EnsureRoleExists("Admin");
+            await _userManager.AddToRoleAsync(user, "Admin");
+        }
+        else
+        {
+            await EnsureRoleExists("Student");
+            await _userManager.AddToRoleAsync(user, "Student");
+        }
 
         return Ok(new { token = _jwt.GenerateToken(user) });
     }
