@@ -6,7 +6,7 @@ name: Build and deploy ASP.Net Core app to Azure Web App - ProjectPlanner
 on:
   push:
     branches:
-      - Azure_Setup
+      - main
   workflow_dispatch:
 
 jobs:
@@ -64,3 +64,4 @@ jobs:
           package: .
 
           
+
