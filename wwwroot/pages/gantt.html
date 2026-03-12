@@ -101,6 +101,8 @@
     <div class="toolbar-right">
       <button class="btn btn-white btn-sm" onclick="openAddModal()">+ Aufgabe</button>
       <button class="btn btn-white btn-sm" onclick="openAddModal(true)">🏁 Meilenstein</button>
+      <button class="btn btn-white btn-sm" onclick="exportGanttExcel()" title="Als Excel exportieren">📊 Excel</button>
+      <button class="btn btn-white btn-sm" onclick="exportGanttPdf()" title="Als PDF exportieren">📄 PDF</button>
       <button class="btn btn-ghost btn-sm" style="color:white;border-color:rgba(255,255,255,.4)" onclick="logout()">Abmelden</button>
     </div>
   </div>
@@ -593,6 +595,25 @@ async function deleteComment(taskId, commentId) {
 }
 
 function logout() { clearToken(); window.location.href = '/index.html'; }
+
+// ── Export-Funktionen ─────────────────────────────────────────────────────
+function exportGanttExcel() {
+  const a = document.createElement('a');
+  a.href = `/api/export/excel/${projectId}?token=${encodeURIComponent(getToken())}`;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function exportGanttPdf() {
+  const a = document.createElement('a');
+  a.href = `/api/export/pdf/${projectId}?token=${encodeURIComponent(getToken())}`;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 document.querySelectorAll('.modal-overlay').forEach(o =>
   o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); }));
