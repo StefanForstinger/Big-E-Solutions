@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Projektplaner – Impressum</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .impressum-page {
+            min-height: 100vh;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+        }
+        .impressum-hero {
+            background: linear-gradient(135deg, var(--dark) 0%, var(--navy) 100%);
+            color: var(--white);
+            padding: 3rem 1.5rem 2.5rem;
+            text-align: center;
+        }
+        .impressum-hero .hero-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+        .impressum-hero h1 { color: var(--white); font-size: 1.8rem; margin-bottom: .4rem; }
+        .impressum-hero p  { color: rgba(255,255,255,.65); font-size: .95rem; }
+        .impressum-content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem;
+            flex: 1;
+        }
+        .impressum-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem 1.8rem;
+            margin-bottom: 1.2rem;
+        }
+        .impressum-section h2 {
+            font-size: 1rem;
+            color: var(--navy);
+            margin-bottom: .9rem;
+            padding-bottom: .6rem;
+            border-bottom: 2px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .impressum-section p,
+        .impressum-section address {
+            font-size: .92rem;
+            color: var(--gray-800);
+            line-height: 1.7;
+            font-style: normal;
+        }
+        .impressum-section a { color: var(--accent); text-decoration: none; }
+        .impressum-section a:hover { text-decoration: underline; }
+        .impressum-note {
+            background: #EFF6FF;
+            border-left: 3px solid var(--accent);
+            border-radius: 0 var(--radius) var(--radius) 0;
+            padding: .9rem 1.2rem;
+            font-size: .88rem;
+            color: #1D4ED8;
+            margin-top: 1.2rem;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            color: var(--accent);
+            font-size: .9rem;
+            font-weight: 600;
+            text-decoration: none;
+            margin-bottom: 1.5rem;
+            padding: .4rem .7rem;
+            border-radius: 6px;
+            transition: background var(--trans);
+        }
+        .back-link:hover { background: var(--gray-200); }
+        .impressum-footer {
+            background: var(--navy);
+            color: rgba(255,255,255,.55);
+            text-align: center;
+            font-size: .82rem;
+            padding: 1.2rem;
+        }
+        .impressum-footer a { color: rgba(255,255,255,.7); }
+    </style>
+</head>
+<body class="impressum-page">
+
+<nav class="navbar">
+    <a href="/index.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
+    <div class="navbar-right">
+        <a href="/index.html" style="color:rgba(255,255,255,.8); font-size:.9rem;">← Zurück zur Anmeldung</a>
+    </div>
+</nav>
+
+<div class="impressum-hero">
+    <div class="hero-icon">📄</div>
+    <h1>Impressum</h1>
+    <p>Rechtliche Angaben gemäß § 5 ECG / § 25 MedienG</p>
+</div>
+
+<div class="impressum-content">
+
+    <a href="/index.html" class="back-link">← Zurück zur Startseite</a>
+
+    <div class="impressum-section">
+        <h2>🏫 Betreiber &amp; Verantwortlicher</h2>
+        <address>
+            <strong>Berufschule Linz 2</strong><br>
+            Wienerstraße 181<br>
+            4020 Linz, Österreich<br><br>
+            <strong>Telefon:</strong> <a href="tel:+43000000000">+43 (0) </a><br>
+            <strong>E-Mail:</strong> <a href="mailto:stefan.forstinger@students.bs-linz2.ac.at">stefan.forstinger@students.bs-linz2.ac.at</a><br>
+            <strong>Web:</strong> <a href="https://bs-linz2.ac.at" target="_blank" rel="noopener">https://bs-linz2.ac.at</a>
+        </address>
+    </div>
+
+    <div class="impressum-section">
+        <h2>💻 Über diese Anwendung</h2>
+        <p>
+            Diese Webanwendung wurde im Rahmen des Unterrichts an der Berufsschule als
+            Eigenentwicklung erstellt. Sie dient ausschließlich zu Lernzwecken und ist nicht
+            für den kommerziellen Einsatz vorgesehen.
+        </p>
+        <p style="margin-top:.6rem">
+            <strong>Projektname:</strong> Projektplaner<br>
+            <strong>Technologie:</strong> HTML, CSS, JavaScript, ASP.NET Core<br>
+        </p>
+    </div>
+
+    <div class="impressum-section">
+        <h2>👤 Entwickelt von</h2>
+        <p>
+            <strong>Big E Solutions</strong><br>
+            <a href="mailto:stefan.forstinger@students.bs-linz2.ac.at">stefan.forstinger@students.bs-linz2.ac.at</a>
+        </p>
+    </div>
+
+    <div class="impressum-section">
+        <h2>⚖️ Haftungsausschluss</h2>
+        <p>
+            Die Inhalte dieser Anwendung wurden mit größtmöglicher Sorgfalt erstellt.
+            Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte wird jedoch
+            keine Gewähr übernommen. Da es sich um ein Schulprojekt handelt, kann der
+            Betrieb jederzeit eingestellt oder geändert werden.
+        </p>
+    </div>
+
+    <div class="impressum-section">
+        <h2>🔒 Datenschutz</h2>
+        <p>
+            Diese Anwendung speichert Benutzerdaten (Name, E-Mail-Adresse) ausschließlich
+            für den Login-Betrieb im schulischen Rahmen. Die Daten werden nicht an Dritte
+            weitergegeben. Gespeicherte Daten können auf Anfrage gelöscht werden.
+        </p>
+        <p style="margin-top:.6rem">
+            Die Anwendung verwendet <strong>localStorage</strong> im Browser, um den
+            Anmeldestatus zu speichern. Es werden keine Tracking-Cookies oder
+            Analyse-Dienste eingesetzt.
+        </p>
+        <div class="impressum-note">
+            ℹ️ Bei Fragen zum Datenschutz wenden Sie sich bitte an den oben angeführten Verantwortlichen.
+        </div>
+    </div>
+
+    <div class="impressum-section">
+        <h2>©️ Urheberrecht</h2>
+        <p>
+            Alle Inhalte dieser Anwendung – insbesondere Code, Layout und Grafiken –
+            unterliegen dem Urheberrecht. Eine Nutzung außerhalb des Schulrahmens bedarf
+            der ausdrücklichen Zustimmung des Entwicklers.
+        </p>
+    </div>
+
+</div>
+
+<footer class="impressum-footer">
+    © 2025 Projektplaner · Big E Solutions ·
+    <a href="/pages/impressum.html">Impressum</a>
+</footer>
+
+</body>
+</html>
