@@ -12,7 +12,6 @@
     .gantt-layout { height:100vh; display:flex; flex-direction:column; }
     #gantt_here  { flex:1; min-height:0; }
 
-    /* ── Slide-in Detailpanel ── */
     #detail-panel {
       position:fixed; right:-420px; top:56px; bottom:0; width:400px;
       background:var(--white); box-shadow:-4px 0 24px rgba(0,0,0,.12);
@@ -29,31 +28,25 @@
     .detail-close:hover { color:var(--white); }
     .detail-body { flex:1; overflow-y:auto; padding:1.2rem; display:flex; flex-direction:column; gap:1rem; }
 
-    /* Tabs im Detail-Panel */
     .detail-tabs { display:flex; gap:.35rem; background:var(--gray-200); border-radius:8px; padding:.25rem; }
     .detail-tab { flex:1; padding:.4rem; background:transparent; border:none; border-radius:6px; font-size:.82rem; font-weight:600; color:var(--gray-600); cursor:pointer; transition:all .15s; }
     .detail-tab.active { background:var(--white); color:var(--navy); box-shadow:0 1px 4px rgba(0,0,0,.1); }
     .detail-pane { display:none; }
     .detail-pane.active { display:block; }
 
-    /* Info-Zeilen */
     .info-row { display:flex; justify-content:space-between; align-items:center; font-size:.85rem; padding:.4rem 0; border-bottom:1px solid var(--gray-200); }
     .info-row:last-child { border-bottom:none; }
     .info-label { color:var(--gray-600); font-weight:600; }
     .info-value { color:var(--gray-800); }
 
-    /* Status-Badge */
     .status-open       { background:#dbeafe; color:#1e40af; }
     .status-inprogress { background:#fef3c7; color:#92400e; }
     .status-done       { background:#dcfce7; color:#15803d; }
     .status-blocked    { background:#fee2e2; color:#b91c1c; }
-
-    /* Priorität-Badge */
     .prio-high   { background:#fee2e2; color:#b91c1c; }
     .prio-medium { background:#fef3c7; color:#92400e; }
     .prio-low    { background:#dcfce7; color:#15803d; }
 
-    /* Kommentare */
     .comment-list { display:flex; flex-direction:column; gap:.75rem; }
     .comment-item { background:var(--gray-100); border-radius:8px; padding:.75rem; }
     .comment-meta { font-size:.75rem; color:var(--gray-600); margin-bottom:.3rem; display:flex; align-items:center; gap:.5rem; }
@@ -68,11 +61,9 @@
     .btn-comment:hover { background:var(--accent-dk); }
     .no-comments { font-size:.85rem; color:var(--gray-600); text-align:center; padding:1rem; font-style:italic; }
 
-    /* Fortschrittsbalken im Panel */
     .progress-bar-wrap { background:var(--gray-200); border-radius:20px; height:8px; overflow:hidden; flex:1; }
     .progress-bar-fill { height:100%; border-radius:20px; }
 
-    /* Edit-Felder im Panel */
     .detail-edit-row { display:flex; flex-direction:column; gap:.3rem; font-size:.85rem; }
     .detail-edit-row label { font-weight:600; color:var(--gray-600); font-size:.8rem; }
     .detail-edit-row input,
@@ -83,31 +74,24 @@
     .detail-edit-row textarea:focus { outline:none; border-color:var(--accent); }
     .detail-edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
     .panel-save-btn { width:100%; margin-top:.5rem; }
-
-    /* Milestone-Icon in Gantt-Spalte */
-    .milestone-icon { color:#F39C12; }
   </style>
 </head>
 <body>
 <div class="gantt-layout">
-
-  <!-- Toolbar -->
   <div class="gantt-toolbar">
     <div class="toolbar-left">
       <a href="/pages/dashboard.html">← Dashboard</a>
       <h2 id="project-title">Gantt-Diagramm</h2>
     </div>
-    <div class="toolbar-right">
-      <button class="btn btn-white btn-sm" onclick="openAddModal()">+ Aufgabe</button>
-      <button class="btn btn-white btn-sm" onclick="openAddModal(true)">🏁 Meilenstein</button>
+    <div class="toolbar-right" id="toolbar-actions">
+      <!-- Buttons werden nach Rollen-Check gesetzt -->
       <button class="btn btn-ghost btn-sm" style="color:white;border-color:rgba(255,255,255,.4)" onclick="logout()">Abmelden</button>
     </div>
   </div>
-
   <div id="gantt_here"></div>
 </div>
 
-<!-- ── Slide-in Detail-Panel ──────────────────────────────────────────────── -->
+<!-- Slide-in Detail-Panel -->
 <div id="detail-panel">
   <div class="detail-header">
     <h3 id="dp-title">Aufgabe</h3>
@@ -173,6 +157,7 @@
       </div>
       <div class="detail-edit-row">
         <label>Zuständige Person</label>
+        <!-- FIX: Dropdown wird mit Projekt-Mitgliedern befüllt, nicht allen Usern -->
         <select id="et-assignee"><option value="">— Nicht zugewiesen —</option></select>
       </div>
       <div class="detail-edit-row">
@@ -199,7 +184,7 @@
   </div>
 </div>
 
-<!-- ── Modal: Aufgabe / Meilenstein hinzufügen ────────────────────────────── -->
+<!-- Modal: Aufgabe / Meilenstein -->
 <div id="modal-add-task" class="modal-overlay">
   <div class="modal">
     <div class="modal-header">
@@ -237,6 +222,7 @@
     </div>
     <div class="form-group">
       <label for="t-assignee">Zuständige Person</label>
+      <!-- FIX: nur Projekt-Mitglieder -->
       <select id="t-assignee"><option value="">— Nicht zugewiesen —</option></select>
     </div>
     <div id="msg-add-task" class="alert alert-hidden"></div>
@@ -251,55 +237,89 @@
 <script>
 if (!isLoggedIn()) window.location.href = '/index.html';
 
-const projectId  = new URLSearchParams(location.search).get('projectId') ?? '1';
-const currentUid = getUser()?.nameid ?? '';
+const projectId   = new URLSearchParams(location.search).get('projectId') ?? '1';
+const currentUid  = getUser()?.nameid ?? '';
 const currentRole = getUserRole();
-let allUsers     = [];
+
+// FIX: nur Projekt-Mitglieder werden geladen
+let projectMembers = [];
+
+// FIX: Verhindert dass loadGantt()/clearAll()/parse() Gantt-interne Events als API-Calls auslöst
+// Gilt für Update, Delete und LinkDelete
+let suppressEvents = false;
+
 let addingMilestone = false;
-let activeTaskId = null;
+let activeTaskId    = null;
 
-// ── Benutzer für Dropdowns laden ──────────────────────────────────────────
-async function loadUsers() {
+// ── Rollen-basierte Toolbar ───────────────────────────────────────────────
+(function setupToolbar() {
+  const isReadOnly = currentRole === 'Teacher';
+  if (!isReadOnly) {
+    const actions = document.getElementById('toolbar-actions');
+    actions.insertAdjacentHTML('afterbegin',
+      `<button class="btn btn-white btn-sm" onclick="openAddModal()">+ Aufgabe</button>
+       <button class="btn btn-white btn-sm" onclick="openAddModal(true)">🏁 Meilenstein</button>`);
+  }
+  // Bearbeiten-Tab ausblenden für Lehrer
+  if (isReadOnly) {
+    document.querySelectorAll('.detail-tab')[1].style.display = 'none';
+  }
+})();
+
+// ── Projekt-Mitglieder laden (für Zuweisung) ─────────────────────────────
+async function loadProjectMembers() {
   try {
-    const res = await apiFetch('/auth/getAll');
+    const res = await apiFetch(`/project/${projectId}/members`);
     if (!res.ok) return;
-    allUsers = await res.json();
-    populateSelect('t-assignee',  allUsers, '');
-    populateSelect('et-assignee', allUsers, '');
-  } catch { /* non-admin: dropdown bleibt leer */ }
-}
-function populateSelect(id, users, selected) {
-  const sel = document.getElementById(id);
-  sel.innerHTML = '<option value="">— Nicht zugewiesen —</option>' +
-    users.map(u => `<option value="${esc(u.id)}" ${u.id===selected?'selected':''}>${esc(u.fullName)} (${esc(u.role)})</option>`).join('');
+    projectMembers = await res.json();
+    populateMemberSelects();
+  } catch { /* ignore */ }
 }
 
-// ── DHTMLX Gantt Konfiguration ────────────────────────────────────────────
+function populateMemberSelects() {
+  const opts = '<option value="">— Nicht zugewiesen —</option>' +
+    projectMembers.map(m =>
+      `<option value="${esc(m.userId)}">${esc(m.fullName)} (${esc(m.email ?? '')})</option>`
+    ).join('');
+  document.getElementById('t-assignee').innerHTML  = opts;
+  document.getElementById('et-assignee').innerHTML = opts;
+}
+
+function setAssigneeSelected(selectId, selectedUserId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  for (const opt of sel.options) {
+    opt.selected = opt.value === (selectedUserId ?? '');
+  }
+}
+
+// ── Gantt Konfiguration ───────────────────────────────────────────────────
 gantt.config.date_format         = '%Y-%m-%d';
 gantt.config.xml_date            = '%Y-%m-%d';
-gantt.config.drag_progress       = true;
-gantt.config.drag_resize         = true;
-gantt.config.drag_move           = true;
+gantt.config.drag_progress       = currentRole !== 'Teacher';
+gantt.config.drag_resize         = currentRole !== 'Teacher';
+gantt.config.drag_move           = currentRole !== 'Teacher';
 gantt.config.fit_tasks           = true;
 gantt.config.open_tree_initially = true;
 gantt.config.row_height          = 38;
 gantt.config.bar_height          = 26;
-gantt.config.details_on_dblclick = false;  // eigenes Panel
+gantt.config.details_on_dblclick = false;
 gantt.config.show_links          = true;
+gantt.config.readonly            = currentRole === 'Teacher';
 
 gantt.config.columns = [
-  { name:'text',      label:'Aufgabe',    width:200, tree:true,
+  { name:'text',      label:'Aufgabe',   width:200, tree:true,
     template: t => (t.type==='milestone' ? '🏁 ' : '') + esc(t.text) },
-  { name:'start_date',label:'Start',      width:90  },
-  { name:'end_date',  label:'Ende',       width:90  },
-  { name:'progress',  label:'%',          width:50,
+  { name:'start_date',label:'Start',     width:90  },
+  { name:'end_date',  label:'Ende',      width:90  },
+  { name:'progress',  label:'%',         width:50,
     template: t => Math.round((t.progress??0)*100)+'%' },
-  { name:'status',    label:'Status',     width:90,
+  { name:'status',    label:'Status',    width:90,
     template: t => {
       const map = { Open:'Offen', InProgress:'In Arbeit', Done:'Fertig', Blocked:'Blockiert' };
       return `<span style="font-size:.75em">${map[t.status]??t.status??''}</span>`;
     }},
-  { name:'assignee',  label:'Zuständig',  width:110,
+  { name:'assignee',  label:'Zuständig', width:110,
     template: t => t.assigneeName
       ? `<span style="font-size:.75em">👤 ${esc(t.assigneeName)}</span>`
       : '<span style="color:#aaa;font-size:.75em">—</span>' },
@@ -311,8 +331,9 @@ gantt.init('gantt_here');
 // Doppelklick → Detail-Panel
 gantt.attachEvent('onTaskDblClick', (id) => { openDetailPanel(id); return false; });
 
-// Drag → auto-speichern
+// Drag → auto-speichern (nur bei echten Benutzer-Aktionen, nicht beim Laden)
 gantt.attachEvent('onAfterTaskUpdate', async (id, task) => {
+  if (suppressEvents) return;
   const fmt = gantt.templates.format_date;
   await apiFetch(`/projects/${projectId}/tasks/${id}`, {
     method:'PUT',
@@ -321,7 +342,11 @@ gantt.attachEvent('onAfterTaskUpdate', async (id, task) => {
       startDate: fmt(task.start_date),
       endDate:   fmt(task.end_date),
       progress:  Math.round((task.progress??0)*100),
-      parentId:  task.parent ? parseInt(task.parent) : null
+      parentId:  task.parent ? parseInt(task.parent) : null,
+      status:    task.status,
+      priority:  task.priority,
+      isMilestone: task.type === 'milestone',
+      assigneeId:  task.assigneeId ?? ''
     })
   });
 });
@@ -340,11 +365,10 @@ gantt.attachEvent('onProgressDragEnd', async (id, progress) => {
       status:    task.status
     })
   });
-  // Detail-Panel aktualisieren wenn offen
   if (activeTaskId == id) refreshInfoTab(task, Math.round(progress*100));
 });
 
-// Links (Abhängigkeiten) speichern
+// Links
 gantt.attachEvent('onAfterLinkAdd', async (id, link) => {
   const res = await apiFetch(`/projects/${projectId}/tasks/links`, {
     method:'POST',
@@ -352,28 +376,47 @@ gantt.attachEvent('onAfterLinkAdd', async (id, link) => {
   });
   if (res.ok) {
     const data = await res.json();
-    // DHTMLX-ID mit echter DB-ID ersetzen damit späteres Löschen klappt
     gantt.changeLinkId(id, data.tid);
   }
 });
 
 gantt.attachEvent('onAfterLinkDelete', async (id) => {
+  if (suppressEvents) return;
   await apiFetch(`/projects/${projectId}/tasks/links/${id}`, { method:'DELETE' });
 });
 
+// FIX: nur löschen wenn nicht durch reload ausgelöst
 gantt.attachEvent('onAfterTaskDelete', async (id) => {
+  if (suppressEvents) return;
   await apiFetch(`/projects/${projectId}/tasks/${id}`, { method:'DELETE' });
   if (activeTaskId == id) closeDetailPanel();
 });
 
-// ── Daten laden ───────────────────────────────────────────────────────────
+// ── Gantt Daten laden ─────────────────────────────────────────────────────
 async function loadGantt() {
   try {
     const res  = await apiFetch(`/projects/${projectId}/tasks`);
     const data = await res.json();
+
+    // suppressEvents=true verhindert, dass clearAll()/parse() API-Calls auslösen
+    suppressEvents = true;
     gantt.clearAll();
     gantt.parse(data);
-  } catch(e) { if (e.message !== 'Nicht eingeloggt') alert('Fehler beim Laden.'); }
+    suppressEvents = false;
+
+    // Projekttitel setzen
+    if (!document.getElementById('project-title').dataset.loaded) {
+      const projRes = await apiFetch(`/project/${projectId}`);
+      if (projRes.ok) {
+        const proj = await projRes.json();
+        document.getElementById('project-title').textContent = proj.name ?? 'Gantt';
+        document.getElementById('project-title').dataset.loaded = '1';
+      }
+    }
+  } catch(e) {
+    suppressEvents = false;
+    if (e.message !== 'Nicht eingeloggt') alert('Fehler beim Laden.');
+  }
 }
 
 // ── Aufgabe hinzufügen ────────────────────────────────────────────────────
@@ -381,19 +424,24 @@ function openAddModal(milestone = false) {
   addingMilestone = milestone;
   document.getElementById('add-modal-title').textContent = milestone ? 'Neuer Meilenstein' : 'Neue Aufgabe';
   document.getElementById('t-progress-wrap').style.display = milestone ? 'none' : 'block';
+  document.getElementById('t-date-row').style.display = milestone ? 'none' : 'flex';
+  hideAlert('msg-add-task');
   openModal('modal-add-task');
 }
 
 async function addTask() {
   const title      = document.getElementById('t-title').value.trim();
-  const start      = document.getElementById('t-start').value;
+  const start      = addingMilestone
+    ? document.getElementById('t-start').value || new Date().toISOString().slice(0,10)
+    : document.getElementById('t-start').value;
   const end        = addingMilestone ? start : document.getElementById('t-end').value;
   const progress   = addingMilestone ? 0 : parseInt(document.getElementById('t-progress').value);
   const status     = document.getElementById('t-status').value;
   const priority   = document.getElementById('t-priority').value;
   const assigneeId = document.getElementById('t-assignee').value || null;
 
-  if (!title || !start) { showAlert('msg-add-task','Bitte alle Pflichtfelder ausfüllen.'); return; }
+  if (!title) { showAlert('msg-add-task','Bitte einen Namen eingeben.'); return; }
+  if (!addingMilestone && !start) { showAlert('msg-add-task','Bitte Startdatum ausfüllen.'); return; }
   if (!addingMilestone && end < start) { showAlert('msg-add-task','Enddatum muss nach Startdatum liegen.'); return; }
 
   setLoading('btn-add-task', true);
@@ -409,8 +457,11 @@ async function addTask() {
       document.getElementById('t-progress').value = '0';
       document.getElementById('progress-label').textContent = '0%';
       hideAlert('msg-add-task');
-      await loadGantt();
-    } else showAlert('msg-add-task','Fehler beim Erstellen.');
+      await loadGantt(); // FIX: reload läuft jetzt mit suppress=true → kein versehentliches Löschen
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showAlert('msg-add-task', err.error ?? err.title ?? 'Fehler beim Erstellen.');
+    }
   } finally { setLoading('btn-add-task', false); }
 }
 
@@ -449,66 +500,62 @@ function fillInfoTab(task) {
 }
 
 function refreshInfoTab(task, pct) {
-  const statusMap  = { Open:'Offen', InProgress:'In Arbeit', Done:'Abgeschlossen', Blocked:'Blockiert' };
-  const statusCls  = { Open:'status-open', InProgress:'status-inprogress', Done:'status-done', Blocked:'status-blocked' };
-  const prioCls    = { High:'prio-high', Medium:'prio-medium', Low:'prio-low' };
-  const prioLabel  = { High:'🔴 Hoch', Medium:'🟡 Mittel', Low:'🟢 Niedrig' };
-  const barColor   = pct >= 100 ? '#27AE60' : pct >= 50 ? '#F39C12' : '#2D9CDB';
-
+  const statusMap = { Open:'Offen', InProgress:'In Arbeit', Done:'Abgeschlossen', Blocked:'Blockiert' };
+  const statusCls = { Open:'status-open', InProgress:'status-inprogress', Done:'status-done', Blocked:'status-blocked' };
+  const prioCls   = { High:'prio-high', Medium:'prio-medium', Low:'prio-low' };
+  const prioLabel = { High:'🔴 Hoch', Medium:'🟡 Mittel', Low:'🟢 Niedrig' };
+  const barColor  = pct >= 100 ? '#27AE60' : pct >= 50 ? '#F39C12' : '#2D9CDB';
   const st  = task.status   ?? 'Open';
   const pri = task.priority ?? 'Medium';
 
-  document.getElementById('dp-status').textContent  = statusMap[st] ?? st;
-  document.getElementById('dp-status').className    = 'badge ' + (statusCls[st] ?? '');
+  document.getElementById('dp-status').textContent   = statusMap[st] ?? st;
+  document.getElementById('dp-status').className     = 'badge ' + (statusCls[st] ?? '');
   document.getElementById('dp-priority').textContent = prioLabel[pri] ?? pri;
   document.getElementById('dp-priority').className   = 'badge ' + (prioCls[pri] ?? '');
 
   const fmt = d => (d instanceof Date) ? d.toISOString().slice(0,10) : String(d??'').slice(0,10);
   document.getElementById('dp-dates').textContent    = `${fmt(task.start_date)} – ${fmt(task.end_date)}`;
   document.getElementById('dp-assignee').textContent = task.assigneeName ?? '—';
-
   document.getElementById('dp-progress-bar').style.width      = pct + '%';
   document.getElementById('dp-progress-bar').style.background = barColor;
   document.getElementById('dp-progress-pct').textContent      = pct + '%';
 
   const noteRow = document.getElementById('dp-note-row');
-  if (task.note) {
-    noteRow.style.display = 'flex';
-    document.getElementById('dp-note').textContent = task.note;
-  } else {
-    noteRow.style.display = 'none';
-  }
+  if (task.note) { noteRow.style.display = 'flex'; document.getElementById('dp-note').textContent = task.note; }
+  else           { noteRow.style.display = 'none'; }
 }
 
 function fillEditTab(task) {
   const fmt = d => (d instanceof Date) ? d.toISOString().slice(0,10) : String(d??'').slice(0,10);
   const pct = Math.round((task.progress ?? 0) * 100);
 
-  document.getElementById('et-id').value         = task.id;
-  document.getElementById('et-title').value      = task.text ?? '';
-  document.getElementById('et-start').value      = fmt(task.start_date);
-  document.getElementById('et-end').value        = fmt(task.end_date);
-  document.getElementById('et-progress').value   = pct;
-  document.getElementById('et-pct').textContent  = pct + '%';
-  document.getElementById('et-status').value     = task.status   ?? 'Open';
-  document.getElementById('et-priority').value   = task.priority ?? 'Medium';
-  document.getElementById('et-milestone').value  = task.type === 'milestone' ? 'true' : 'false';
-  document.getElementById('et-note').value       = task.note ?? '';
+  document.getElementById('et-id').value        = task.id;
+  document.getElementById('et-title').value     = task.text ?? '';
+  document.getElementById('et-start').value     = fmt(task.start_date);
+  document.getElementById('et-end').value       = fmt(task.end_date);
+  document.getElementById('et-progress').value  = pct;
+  document.getElementById('et-pct').textContent = pct + '%';
+  document.getElementById('et-status').value    = task.status   ?? 'Open';
+  document.getElementById('et-priority').value  = task.priority ?? 'Medium';
+  document.getElementById('et-milestone').value = task.type === 'milestone' ? 'true' : 'false';
+  document.getElementById('et-note').value      = task.note ?? '';
   document.getElementById('msg-edit-task').textContent = '';
-  populateSelect('et-assignee', allUsers, task.assigneeId ?? '');
+
+  // FIX: Zuweisung mit aktuellen Projekt-Mitgliedern befüllen
+  setAssigneeSelected('et-assignee', task.assigneeId ?? '');
 }
 
 async function saveEditTask() {
-  const id         = document.getElementById('et-id').value;
-  const title      = document.getElementById('et-title').value.trim();
-  const start      = document.getElementById('et-start').value;
-  const end        = document.getElementById('et-end').value;
-  const progress   = parseInt(document.getElementById('et-progress').value);
-  const status     = document.getElementById('et-status').value;
-  const priority   = document.getElementById('et-priority').value;
+  const id          = document.getElementById('et-id').value;
+  const title       = document.getElementById('et-title').value.trim();
+  const start       = document.getElementById('et-start').value;
+  const end         = document.getElementById('et-end').value;
+  const progress    = parseInt(document.getElementById('et-progress').value);
+  const status      = document.getElementById('et-status').value;
+  const priority    = document.getElementById('et-priority').value;
   const isMilestone = document.getElementById('et-milestone').value === 'true';
-  const assigneeId = document.getElementById('et-assignee').value || '';
-  const note       = document.getElementById('et-note').value.trim();
+  const assigneeId  = document.getElementById('et-assignee').value || '';
+  const note        = document.getElementById('et-note').value.trim();
 
   if (!title || !start || !end) { document.getElementById('msg-edit-task').textContent = 'Bitte alle Pflichtfelder ausfüllen.'; return; }
   if (end < start)              { document.getElementById('msg-edit-task').textContent = 'Enddatum muss nach Startdatum liegen.'; return; }
@@ -524,23 +571,29 @@ async function saveEditTask() {
 
   if (res.ok) {
     document.getElementById('msg-edit-task').textContent = '';
-    await loadGantt();
-    // Panel-Header aktualisieren
+    await loadGantt(); // FIX: suppress ist aktiv → kein versehentliches Löschen
+
     document.getElementById('dp-title').textContent = title;
+    // FIX: nach reload korrekte Task-Daten aus Gantt lesen
     const updatedTask = gantt.getTask(id);
     if (updatedTask) fillInfoTab(updatedTask);
   } else {
-    document.getElementById('msg-edit-task').textContent = 'Fehler beim Speichern.';
+    const err = await res.json().catch(() => ({}));
+    document.getElementById('msg-edit-task').textContent = err.error ?? err.title ?? 'Fehler beim Speichern.';
   }
 }
 
 async function deleteTaskFromPanel() {
   const id   = document.getElementById('et-id').value;
   const task = gantt.getTask(id);
-  if (!confirm(`Aufgabe "${task?.text}" wirklich löschen?`)) return;
-  await apiFetch(`/projects/${projectId}/tasks/${id}`, { method:'DELETE' });
-  closeDetailPanel();
-  await loadGantt();
+  if (!confirm(`Aufgabe "${task?.text ?? id}" wirklich löschen?`)) return;
+  const res = await apiFetch(`/projects/${projectId}/tasks/${id}`, { method:'DELETE' });
+  if (res.ok || res.status === 204) {
+    closeDetailPanel();
+    suppressEvents = true;
+    gantt.deleteTask(id);
+    suppressEvents = false;
+  }
 }
 
 // ── Kommentare ────────────────────────────────────────────────────────────
@@ -550,10 +603,7 @@ async function loadComments(taskId) {
   try {
     const res      = await apiFetch(`/projects/${projectId}/tasks/${taskId}/comments`);
     const comments = await res.json();
-    if (!comments.length) {
-      list.innerHTML = '<p class="no-comments">Noch keine Kommentare.</p>';
-      return;
-    }
+    if (!comments.length) { list.innerHTML = '<p class="no-comments">Noch keine Kommentare.</p>'; return; }
     list.innerHTML = comments.map(c => `
       <div class="comment-item">
         <div class="comment-meta">
@@ -565,24 +615,17 @@ async function loadComments(taskId) {
         </div>
         <div class="comment-text">${esc(c.text)}</div>
       </div>`).join('');
-  } catch {
-    list.innerHTML = '<p class="no-comments">Fehler beim Laden.</p>';
-  }
+  } catch { list.innerHTML = '<p class="no-comments">Fehler beim Laden.</p>'; }
 }
 
 async function submitComment() {
-  const input  = document.getElementById('comment-input');
-  const text   = input.value.trim();
+  const input = document.getElementById('comment-input');
+  const text  = input.value.trim();
   if (!text || !activeTaskId) return;
-
   const res = await apiFetch(`/projects/${projectId}/tasks/${activeTaskId}/comments`, {
-    method:'POST',
-    body: JSON.stringify({ text })
+    method:'POST', body: JSON.stringify({ text })
   });
-  if (res.ok) {
-    input.value = '';
-    await loadComments(activeTaskId);
-  }
+  if (res.ok) { input.value = ''; await loadComments(activeTaskId); }
 }
 
 async function deleteComment(taskId, commentId) {
@@ -596,17 +639,16 @@ function logout() { clearToken(); window.location.href = '/index.html'; }
 document.querySelectorAll('.modal-overlay').forEach(o =>
   o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); }));
 
-// Enter in Kommentar-Textarea
 document.getElementById('comment-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); }
 });
 
-// Standarddaten
 const today = new Date().toISOString().slice(0,10);
 document.getElementById('t-start').value = today;
 document.getElementById('t-end').value   = today;
 
-loadUsers().then(() => loadGantt());
+// FIX: erst Projekt-Mitglieder laden, dann Gantt
+loadProjectMembers().then(() => loadGantt());
 </script>
 </body>
 </html>

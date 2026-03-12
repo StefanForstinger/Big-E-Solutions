@@ -11,7 +11,6 @@
     .role-teacher { background:#fef3c7; color:#92400e; }
     .role-student { background:#dbeafe; color:#1e40af; }
 
-    /* ── Panel-Sektionen ── */
     .panel-section { margin-bottom:2rem; }
     .panel-section-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:.9rem; }
     .panel-section-title h2 { font-size:1rem; color:var(--navy); }
@@ -19,7 +18,6 @@
     .panel-toggle:hover { background:var(--gray-200); }
     .panel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.2rem; }
 
-    /* ── Admin-Karte ── */
     .admin-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); border-left:4px solid var(--red); overflow:hidden; transition:box-shadow var(--trans),transform var(--trans); }
     .admin-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
     .admin-card-header { display:flex; align-items:center; justify-content:space-between; padding:.9rem 1.1rem .6rem; }
@@ -32,7 +30,6 @@
     .admin-card-footer select { flex:1; padding:4px 8px; border-radius:6px; border:1.5px solid var(--gray-400); font-size:.85rem; }
     .admin-card-footer select:disabled { opacity:.5; cursor:not-allowed; }
 
-    /* ── Assign-Karte (Teacher) ── */
     .assign-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); border-left:4px solid var(--green); padding:1.2rem; display:flex; flex-direction:column; gap:.5rem; transition:box-shadow var(--trans),transform var(--trans); }
     .assign-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
     .assign-card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem; }
@@ -52,11 +49,9 @@
     .assign-msg.ok  { color:#15803d; }
     .assign-msg.err { color:#b91c1c; }
 
-    /* ── Fortschrittsbalken auf Projektkarten ── */
     .progress-bar-wrap { background:var(--gray-200); border-radius:20px; height:6px; overflow:hidden; margin-top:.3rem; }
     .progress-bar-fill { height:100%; border-radius:20px; transition:width .4s ease; }
 
-    /* ── Farbwähler im Modal ── */
     .color-swatches { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.35rem; }
     .swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:border-color .15s,transform .15s; }
     .swatch:hover { transform:scale(1.15); }
@@ -181,8 +176,11 @@
     roleEl.textContent = currentRole;
     roleEl.className = 'role-badge role-' + currentRole.toLowerCase();
 
-    if (currentRole === 'Student') {
+    // Lehrer dürfen keine Projekte erstellen
+    if (currentRole === 'Student' || currentRole === 'Teacher') {
       document.getElementById('btn-new-project').style.display = 'none';
+    }
+    if (currentRole === 'Student') {
       document.getElementById('page-sub').textContent = 'Hier siehst du deine zugewiesenen Projekte';
     }
     if (currentRole === 'Admin') {
@@ -198,23 +196,25 @@
     const PROJECT_COLORS = ['#2D9CDB','#27AE60','#E74C3C','#F39C12','#8E44AD','#1E3A5F','#16A085','#D35400'];
 
     function buildSwatches(containerId, hiddenId, selectedColor) {
+      const norm = (selectedColor || '#2D9CDB').toUpperCase();
       const cont = document.getElementById(containerId);
       cont.innerHTML = PROJECT_COLORS.map(c => `
-        <div class="swatch ${c === selectedColor ? 'selected' : ''}"
+        <div class="swatch ${c.toUpperCase() === norm ? 'selected' : ''}"
              style="background:${c}"
+             data-color="${c}"
              onclick="selectColor('${containerId}','${hiddenId}','${c}')"></div>
       `).join('');
-      document.getElementById(hiddenId).value = selectedColor;
+      document.getElementById(hiddenId).value = selectedColor || '#2D9CDB';
     }
     function selectColor(containerId, hiddenId, color) {
       document.getElementById(hiddenId).value = color;
+      // FIX: Vergleich über data-color Attribut statt style.background (Browser normalisieren zu rgb())
       document.getElementById(containerId).querySelectorAll('.swatch')
-        .forEach(s => s.classList.toggle('selected', s.style.background === color || s.style.backgroundColor === color));
+        .forEach(s => s.classList.toggle('selected', s.dataset.color === color));
     }
     buildSwatches('new-swatches',  'p-color',    '#2D9CDB');
     buildSwatches('edit-swatches', 'edit-color', '#2D9CDB');
 
-    // ── Toggle ──────────────────────────────────────────────────────────────
     function toggleSection(gridId) {
       const el = document.getElementById(gridId);
       el.style.display = el.style.display === 'none' ? 'grid' : 'none';
@@ -242,7 +242,9 @@
             <div class="admin-card-footer">
               <label>Rolle:</label>
               <select onchange="changeRole('${esc(u.id)}', this)"
-                      ${u.id === currentUser?.nameid ? 'disabled title="Eigene Rolle nicht änderbar"' : ''}>
+              ${(u.id === currentUser?.nameid || u.role === 'Admin')
+                ? 'disabled title="Admin kann nicht geändert werden"'
+                : ''}>
                 <option value="Student" ${u.role==='Student'?'selected':''}>Student</option>
                 <option value="Teacher" ${u.role==='Teacher'?'selected':''}>Teacher</option>
                 <option value="Admin"   ${u.role==='Admin'  ?'selected':''}>Admin</option>
@@ -342,11 +344,12 @@
       if (el) { el.textContent = text; el.className = 'assign-msg ' + (type ?? ''); }
     }
 
-    // ── Projekte ────────────────────────────────────────────────────────────
+    // ── Projekte laden ──────────────────────────────────────────────────────
     async function loadProjects() {
       try {
         const res  = await apiFetch('/project');
         const data = await res.json();
+        allProjects = data; // auch für Teacher-Panel aktuell halten
         renderProjects(data);
       } catch(e) { if (e.message !== 'Nicht eingeloggt') renderProjectError(); }
     }
@@ -360,6 +363,7 @@
               <button class="btn btn-primary mt-2" onclick="openModal('modal-new-project')">Erstes Projekt erstellen</button></div>`;
         return;
       }
+
       grid.innerHTML = projects.map(p => {
         const taskCount   = (p.tasks ?? []).length;
         const progress    = p.progress ?? 0;
@@ -367,14 +371,23 @@
         const end         = p.endDate?.slice(0,10)   ?? '';
         const color       = p.color ?? '#2D9CDB';
         const memberCount = (p.members ?? []).length;
-        const canEdit     = p.ownerId === currentUser?.nameid || currentRole === 'Admin' || currentRole === 'Teacher';
-        const canDelete   = p.ownerId === currentUser?.nameid || currentRole === 'Admin';
 
-        // Fortschrittsfarbe
+        // FIX: Lehrer dürfen NICHT bearbeiten
+        const canEdit   = (p.ownerId === currentUser?.nameid || currentRole === 'Admin') && currentRole !== 'Teacher';
+        const canDelete = p.ownerId === currentUser?.nameid || currentRole === 'Admin';
+
         const barColor = progress >= 100 ? '#27AE60' : progress >= 50 ? '#F39C12' : '#2D9CDB';
 
+        // FIX: Projekt-Daten sicher als data-Attribute speichern statt inline-onclick mit JSON
+        const cardId = `proj-${p.id}`;
         return `
-          <div class="project-card" style="border-left-color:${color}">
+          <div class="project-card" id="${cardId}" style="border-left-color:${color}"
+               data-id="${p.id}"
+               data-name="${esc(p.name)}"
+               data-desc="${esc(p.description ?? '')}"
+               data-start="${start}"
+               data-end="${end}"
+               data-color="${color}">
             <div class="project-card-header">
               <h3>${esc(p.name)}</h3>
               <span class="badge badge-blue">${taskCount} Aufgaben</span>
@@ -393,8 +406,8 @@
             </div>
             <div class="project-actions" style="margin-top:.6rem">
               <button class="btn btn-primary btn-sm" onclick="openGantt(${p.id})">📊 Gantt</button>
-              ${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="openEdit(${p.id}, ${JSON.stringify(p.name)}, ${JSON.stringify(p.description)}, '${start}', '${end}', '${color}')">✏️ Bearbeiten</button>` : ''}
-              ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id}, ${JSON.stringify(p.name)})">🗑</button>` : ''}
+              ${canEdit   ? `<button class="btn btn-ghost btn-sm"  onclick="openEditById(${p.id})">✏️ Bearbeiten</button>` : ''}
+              ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteProjectById(${p.id})">🗑</button>` : ''}
             </div>
           </div>`;
       }).join('');
@@ -403,6 +416,28 @@
     function renderProjectError() {
       document.getElementById('project-grid').innerHTML =
         '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Fehler beim Laden.</p><button class="btn btn-ghost mt-2" onclick="loadProjects()">Erneut</button></div>';
+    }
+
+    // FIX: openEdit liest Daten sicher aus data-Attributen statt aus inline-onclick-Parametern
+    function openEditById(id) {
+      const card = document.getElementById(`proj-${id}`);
+      if (!card) return;
+      document.getElementById('edit-id').value    = card.dataset.id;
+      document.getElementById('edit-name').value  = card.dataset.name;
+      document.getElementById('edit-desc').value  = card.dataset.desc;
+      document.getElementById('edit-start').value = card.dataset.start;
+      document.getElementById('edit-end').value   = card.dataset.end;
+      buildSwatches('edit-swatches','edit-color', card.dataset.color || '#2D9CDB');
+      hideAlert('msg-edit-project');
+      openModal('modal-edit-project');
+    }
+
+    async function deleteProjectById(id) {
+      const card = document.getElementById(`proj-${id}`);
+      const name = card?.dataset.name ?? 'Dieses Projekt';
+      if (!confirm(`Projekt "${name}" wirklich löschen?\nAlle Aufgaben werden ebenfalls gelöscht.`)) return;
+      const res = await apiFetch(`/project/${id}`, { method:'DELETE' });
+      if (res.ok || res.status === 204) { loadProjects(); if (currentRole !== 'Student') loadTeacherPanel(); }
     }
 
     // ── Projekt erstellen ───────────────────────────────────────────────────
@@ -430,18 +465,7 @@
       } finally { setLoading('btn-create', false); }
     }
 
-    // ── Projekt bearbeiten ──────────────────────────────────────────────────
-    function openEdit(id, name, desc, start, end, color) {
-      document.getElementById('edit-id').value    = id;
-      document.getElementById('edit-name').value  = name;
-      document.getElementById('edit-desc').value  = desc;
-      document.getElementById('edit-start').value = start;
-      document.getElementById('edit-end').value   = end;
-      buildSwatches('edit-swatches','edit-color', color || '#2D9CDB');
-      hideAlert('msg-edit-project');
-      openModal('modal-edit-project');
-    }
-
+    // ── Projekt speichern ───────────────────────────────────────────────────
     async function saveEdit() {
       const id    = document.getElementById('edit-id').value;
       const name  = document.getElementById('edit-name').value.trim();
@@ -457,12 +481,6 @@
         if (res.ok) { closeModal('modal-edit-project'); loadProjects(); }
         else showAlert('msg-edit-project','Fehler beim Speichern.');
       } finally { setLoading('btn-save-edit', false); }
-    }
-
-    async function deleteProject(id, name) {
-      if (!confirm(`Projekt "${name}" wirklich löschen?\nAlle Aufgaben werden ebenfalls gelöscht.`)) return;
-      const res = await apiFetch(`/project/${id}`, { method:'DELETE' });
-      if (res.ok || res.status === 204) { loadProjects(); if (currentRole !== 'Student') loadTeacherPanel(); }
     }
 
     function openGantt(id) { window.location.href = `/pages/gantt.html?projectId=${id}`; }

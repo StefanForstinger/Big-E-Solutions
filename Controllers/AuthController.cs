@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ProjectPlanner.Data;
 using ProjectPlanner.Models;
 using ProjectPlanner.Services;
 
@@ -11,54 +12,67 @@ namespace ProjectPlanner.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly UserManager<AppUser>  _userManager;
+    private readonly UserManager<AppUser>      _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly JwtService            _jwt;
+    private readonly JwtService                _jwt;
+    private readonly AppDbContext              _db;
 
     public AuthController(
         UserManager<AppUser>      userManager,
         RoleManager<IdentityRole> roleManager,
-        JwtService                jwt)
+        JwtService                jwt,
+        AppDbContext              db)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _jwt         = jwt;
+        _db          = db;
     }
 
-    // ── Registrieren ────────────────────────────────────────────────────────
+    // ── Registrieren ──────────────────────────────────────────────────────────
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDto dto)
     {
+        if (!dto.PrivacyAccepted)
+            return BadRequest(new { error = "Datenschutzbestimmungen müssen akzeptiert werden." });
+
+        var users   = await _userManager.Users.ToListAsync();
+        var isFirst = users.Count == 0;
+
         var user = new AppUser
         {
-            UserName = dto.Email,
-            Email    = dto.Email,
-            FullName = dto.FullName,
-            Role     = "Student"           // Standardrolle
+            UserName           = dto.Email,
+            Email              = dto.Email,
+            FullName           = dto.FullName,
+            Role               = isFirst ? "Admin" : "Student",
+            MustChangePassword = !isFirst,
+            PrivacyAccepted    = true
         };
-
-        var users = await _userManager.Users.ToListAsync();
-        if(users.Count == 0)
-        {
-            user.Role = "Admin"; // Erster registrierter Benutzer wird Admin
-        }
 
         var result = await _userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
-        if (users.Count == 0)
-        {
-            await EnsureRoleExists("Admin");
-            await _userManager.AddToRoleAsync(user, "Admin");
-        }
-        else
-        {
-            await EnsureRoleExists("Student");
-            await _userManager.AddToRoleAsync(user, "Student");
-        }
+        var roleName = isFirst ? "Admin" : "Student";
+        await EnsureRoleExists(roleName);
+        await _userManager.AddToRoleAsync(user, roleName);
 
-        return Ok(new { token = _jwt.GenerateToken(user) });
+        // Datenschutz-Zustimmung protokollieren
+        _db.PrivacyConsents.Add(new PrivacyConsent
+        {
+            UserId     = user.Id,
+            AcceptedAt = DateTime.UtcNow,
+            IpAddress  = HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Version    = "1.0",
+            Accepted   = true
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            token              = _jwt.GenerateToken(user),
+            mustChangePassword = user.MustChangePassword
+        });
     }
 
     // ── Login ────────────────────────────────────────────────────────────────
@@ -69,7 +83,75 @@ public class AuthController : ControllerBase
         if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
             return Unauthorized(new { error = "Ungültige Anmeldedaten" });
 
-        return Ok(new { token = _jwt.GenerateToken(user) });
+        return Ok(new
+        {
+            token              = _jwt.GenerateToken(user),
+            mustChangePassword = user.MustChangePassword,
+            privacyAccepted    = user.PrivacyAccepted
+        });
+    }
+
+    // ── Passwort ändern ──────────────────────────────────────────────────────
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var user   = await _userManager.FindByIdAsync(userId!);
+        if (user == null) return NotFound();
+
+        var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+
+        user.MustChangePassword = false;
+        await _userManager.UpdateAsync(user);
+
+        return Ok(new { message = "Passwort erfolgreich geändert.", token = _jwt.GenerateToken(user) });
+    }
+
+    // ── Datenschutz akzeptieren ──────────────────────────────────────────────
+    [HttpPost("accept-privacy")]
+    [Authorize]
+    public async Task<IActionResult> AcceptPrivacy()
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var user   = await _userManager.FindByIdAsync(userId!);
+        if (user == null) return NotFound();
+
+        user.PrivacyAccepted = true;
+        await _userManager.UpdateAsync(user);
+
+        _db.PrivacyConsents.Add(new PrivacyConsent
+        {
+            UserId     = user.Id,
+            AcceptedAt = DateTime.UtcNow,
+            IpAddress  = HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Version    = "1.0",
+            Accepted   = true
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Datenschutz akzeptiert." });
+    }
+
+    // ── Eigenes Profil abrufen ───────────────────────────────────────────────
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<IActionResult> Me()
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var user   = await _userManager.FindByIdAsync(userId!);
+        if (user == null) return NotFound();
+
+        return Ok(new
+        {
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Role,
+            user.MustChangePassword,
+            user.PrivacyAccepted
+        });
     }
 
     // ── Alle Benutzer abrufen (nur Admin/Teacher) ────────────────────────────
@@ -94,11 +176,9 @@ public class AuthController : ControllerBase
         var user = await _userManager.FindByIdAsync(dto.UserId);
         if (user == null) return NotFound(new { error = "Benutzer nicht gefunden" });
 
-        // Aus allen bestehenden Rollen entfernen
         var currentRoles = await _userManager.GetRolesAsync(user);
         await _userManager.RemoveFromRolesAsync(user, currentRoles);
 
-        // Neue Rolle vergeben
         await EnsureRoleExists(dto.Role);
         await _userManager.AddToRoleAsync(user, dto.Role);
 
@@ -108,7 +188,40 @@ public class AuthController : ControllerBase
         return Ok(new { message = $"Rolle auf '{dto.Role}' gesetzt.", token = _jwt.GenerateToken(user) });
     }
 
-    // ── Hilfsmethode: Rolle anlegen wenn nicht vorhanden ────────────────────
+    // ── Benutzer durch Admin anlegen (mit Standardpasswort) ─────────────────
+    [HttpPost("create-user")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateUser(CreateUserDto dto)
+    {
+        if (!new[] { "Admin", "Teacher", "Student" }.Contains(dto.Role))
+            return BadRequest(new { error = "Ungültige Rolle." });
+
+        var user = new AppUser
+        {
+            UserName           = dto.Email,
+            Email              = dto.Email,
+            FullName           = dto.FullName,
+            Role               = dto.Role,
+            MustChangePassword = true,
+            PrivacyAccepted    = false
+        };
+
+        const string defaultPassword = "Schule2024!";
+        var result = await _userManager.CreateAsync(user, defaultPassword);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+
+        await EnsureRoleExists(dto.Role);
+        await _userManager.AddToRoleAsync(user, dto.Role);
+
+        return Ok(new
+        {
+            message            = $"Benutzer '{dto.FullName}' angelegt.",
+            userId             = user.Id,
+            defaultPassword,
+            mustChangePassword = true
+        });
+    }
+
     private async Task EnsureRoleExists(string role)
     {
         if (!await _roleManager.RoleExistsAsync(role))
@@ -116,6 +229,8 @@ public class AuthController : ControllerBase
     }
 }
 
-public record RegisterDto(string Email, string Password, string FullName);
+public record RegisterDto(string Email, string Password, string FullName, bool PrivacyAccepted);
 public record LoginDto(string Email, string Password);
 public record SetRoleDto(string UserId, string Role);
+public record ChangePasswordDto(string CurrentPassword, string NewPassword);
+public record CreateUserDto(string Email, string FullName, string Role);

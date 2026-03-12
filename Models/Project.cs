@@ -16,7 +16,9 @@ public class Project
     public string OwnerId { get; set; } = string.Empty;
     [JsonIgnore] public AppUser Owner { get; set; } = null!;
 
-    public ICollection<ProjectTask>   Tasks   { get; set; } = new List<ProjectTask>();
-    [JsonIgnore] public ICollection<ProjectMember> Members { get; set; } = new List<ProjectMember>();
-    [JsonIgnore] public ICollection<TaskLink>      Links   { get; set; } = new List<TaskLink>();
+    public ICollection<ProjectTask>   Tasks         { get; set; } = new List<ProjectTask>();
+    [JsonIgnore] public ICollection<ProjectMember> Members       { get; set; } = new List<ProjectMember>();
+    [JsonIgnore] public ICollection<TaskLink>      Links         { get; set; } = new List<TaskLink>();
+    [JsonIgnore] public ICollection<WorkSchedule>  WorkSchedules { get; set; } = new List<WorkSchedule>();
+    [JsonIgnore] public ICollection<TimeEntry>     TimeEntries   { get; set; } = new List<TimeEntry>();
 }

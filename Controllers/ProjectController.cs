@@ -22,6 +22,9 @@ public class ProjectController : ControllerBase
         _userManager = userManager;
     }
 
+    // ── Alle Projekte abrufen ────────────────────────────────────────────────
+    // Lehrer: alle Projekte (Lesezugriff)
+    // Schüler: nur eigene oder zugewiesene
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -43,29 +46,43 @@ public class ProjectController : ControllerBase
             p.Id, p.Name, p.Description, p.StartDate, p.EndDate, p.OwnerId, p.Color,
             owner    = p.Owner == null ? null : new { p.Owner.FullName },
             tasks    = p.Tasks.Select(t => new { t.Id, t.Progress }),
-            members  = p.Members.Select(m => new { m.UserId, m.User.FullName, m.User.Email }),
-            progress = p.Tasks.Any() ? (int)p.Tasks.Average(t => t.Progress) : 0
+            members  = p.Members.Select(m => new { m.UserId, m.User.FullName, m.User.Email, m.JoinedAt }),
+            progress = p.Tasks.Any() ? (int)p.Tasks.Average(t => t.Progress) : 0,
+            isReadOnly = role == "Teacher" // Lehrer haben nur Lesezugriff
         });
 
         return Ok(result);
     }
 
+    // ── Einzelnes Projekt abrufen ────────────────────────────────────────────
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id)
     {
         var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var role    = User.FindFirstValue(ClaimTypes.Role)!;
-        var project = await _db.Projects.Include(p => p.Tasks).Include(p => p.Members).FirstOrDefaultAsync(p => p.Id == id);
+        var project = await _db.Projects
+            .Include(p => p.Tasks)
+            .Include(p => p.Members).ThenInclude(m => m.User)
+            .Include(p => p.WorkSchedules)
+            .FirstOrDefaultAsync(p => p.Id == id);
 
         if (project == null) return NotFound();
         if (project.OwnerId != userId && role is not ("Admin" or "Teacher") && !project.Members.Any(m => m.UserId == userId))
             return Forbid();
 
-        return Ok(project);
+        return Ok(new
+        {
+            project.Id, project.Name, project.Description,
+            project.StartDate, project.EndDate, project.OwnerId, project.Color,
+            members       = project.Members.Select(m => new { m.UserId, m.User.FullName, m.User.Email, m.JoinedAt }),
+            workSchedules = project.WorkSchedules,
+            isReadOnly    = role == "Teacher"
+        });
     }
 
+    // ── Projekt erstellen (Schüler und Admin; Lehrer dürfen nicht) ──────────
     [HttpPost]
-    [Authorize(Roles = "Admin,Teacher")]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Create([FromBody] ProjectDto dto)
     {
         var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -83,7 +100,9 @@ public class ProjectController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = project.Id }, project);
     }
 
+    // ── Projekt bearbeiten (nur Owner oder Admin; Lehrer dürfen nicht) ───────
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Update(int id, [FromBody] ProjectDto dto)
     {
         var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -102,7 +121,9 @@ public class ProjectController : ControllerBase
         return Ok(project);
     }
 
+    // ── Projekt löschen (nur Owner oder Admin) ───────────────────────────────
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Delete(int id)
     {
         var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -116,8 +137,9 @@ public class ProjectController : ControllerBase
         return NoContent();
     }
 
+    // ── Mitglied hinzufügen (nur Admin; Lehrer dürfen nicht) ────────────────
     [HttpPost("{id:int}/members")]
-    [Authorize(Roles = "Admin,Teacher")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AddMember(int id, [FromBody] MemberDto dto)
     {
         var project = await _db.Projects.FindAsync(id);
@@ -133,14 +155,20 @@ public class ProjectController : ControllerBase
         var already = await _db.ProjectMembers.AnyAsync(m => m.ProjectId == id && m.UserId == dto.UserId);
         if (already) return Conflict(new { error = $"{user.FullName} ist bereits zugewiesen." });
 
-        _db.ProjectMembers.Add(new ProjectMember { ProjectId = id, UserId = dto.UserId });
+        _db.ProjectMembers.Add(new ProjectMember
+        {
+            ProjectId = id,
+            UserId    = dto.UserId,
+            JoinedAt  = DateTime.UtcNow
+        });
         await _db.SaveChangesAsync();
 
         return Ok(new { message = $"{user.FullName} wurde hinzugefügt.", userId = user.Id, fullName = user.FullName });
     }
 
+    // ── Mitglied entfernen (nur Admin) ───────────────────────────────────────
     [HttpDelete("{id:int}/members/{userId}")]
-    [Authorize(Roles = "Admin,Teacher")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> RemoveMember(int id, string userId)
     {
         var member = await _db.ProjectMembers.FirstOrDefaultAsync(m => m.ProjectId == id && m.UserId == userId);
@@ -151,15 +179,27 @@ public class ProjectController : ControllerBase
         return NoContent();
     }
 
+    // ── Mitglieder eines Projekts abrufen ────────────────────────────────────
     [HttpGet("{id:int}/members")]
     public async Task<IActionResult> GetMembers(int id)
     {
         var members = await _db.ProjectMembers
             .Where(m => m.ProjectId == id)
             .Include(m => m.User)
-            .Select(m => new { m.UserId, m.User.FullName, m.User.Email })
+            .Select(m => new { m.UserId, m.User.FullName, m.User.Email, m.JoinedAt })
             .ToListAsync();
         return Ok(members);
+    }
+
+    // ── Zeitplan eines Projekts abrufen ──────────────────────────────────────
+    [HttpGet("{id:int}/schedules")]
+    public async Task<IActionResult> GetSchedules(int id)
+    {
+        var schedules = await _db.WorkSchedules
+            .Where(ws => ws.ProjectId == id || ws.ProjectId == null)
+            .OrderByDescending(ws => ws.IsDefault)
+            .ToListAsync();
+        return Ok(schedules);
     }
 }
 

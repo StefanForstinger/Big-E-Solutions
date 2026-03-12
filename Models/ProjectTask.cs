@@ -9,6 +9,15 @@ public class ProjectTask
     public DateTime StartDate { get; set; }
     public DateTime EndDate   { get; set; }
 
+    /// <summary>Geplante Dauer in Stunden (manuell gepflegt)</summary>
+    public decimal? PlannedDuration { get; set; }
+
+    /// <summary>Tatsächliche Dauer in Stunden – Summe aus TIME_ENTRIES</summary>
+    public decimal ActualDuration { get; set; } = 0;
+
+    /// <summary>Arbeitsanteil in % basierend auf gestempelten Stunden</summary>
+    public decimal WorkSharePercent { get; set; } = 0;
+
     /// <summary>0–100 Prozent</summary>
     public int Progress { get; set; } = 0;
 
@@ -33,7 +42,8 @@ public class ProjectTask
     public int     ProjectId { get; set; }
     [JsonIgnore] public Project Project { get; set; } = null!;
 
-    [JsonIgnore] public ICollection<TaskLink> LinksFrom { get; set; } = new List<TaskLink>();
-    [JsonIgnore] public ICollection<TaskLink> LinksTo   { get; set; } = new List<TaskLink>();
-    [JsonIgnore] public ICollection<TaskComment> Comments { get; set; } = new List<TaskComment>();
+    [JsonIgnore] public ICollection<TaskLink>    LinksFrom   { get; set; } = new List<TaskLink>();
+    [JsonIgnore] public ICollection<TaskLink>    LinksTo     { get; set; } = new List<TaskLink>();
+    [JsonIgnore] public ICollection<TaskComment> Comments    { get; set; } = new List<TaskComment>();
+    [JsonIgnore] public ICollection<TimeEntry>   TimeEntries { get; set; } = new List<TimeEntry>();
 }
