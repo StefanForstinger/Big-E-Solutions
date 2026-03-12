@@ -45,6 +45,16 @@ builder.Services.AddAuthentication(options =>
         ValidAudience            = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
+    // Token auch aus Query-String lesen (für Datei-Downloads)
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = ctx =>
+        {
+            if (ctx.Request.Query.TryGetValue("token", out var token))
+                ctx.Token = token;
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization();

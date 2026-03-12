@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Projektplaner – Dashboard</title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/png" href="/favicon.png">
   <style>
     .role-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:.76em; font-weight:700; letter-spacing:.02em; }
     .role-admin   { background:#fee2e2; color:#b91c1c; }
@@ -98,7 +99,11 @@
         <h1 id="page-title">Meine Projekte</h1>
         <p class="text-muted mt-1" id="page-sub">Verwalte deine Projekte und Aufgaben</p>
       </div>
-      <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="exportAllExcel()" title="Alle Projekte als Excel exportieren">      <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>#128202; Excel</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportAllPdf()" title="Alle Projekte als PDF exportieren">      <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>#128196; PDF</button>
+        <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>
+      </div>
     </div>
     <div id="project-grid" class="project-grid">
       <div class="empty-state"><div class="empty-icon">⏳</div><p>Wird geladen…</p></div>
@@ -406,8 +411,10 @@
             </div>
             <div class="project-actions" style="margin-top:.6rem">
               <button class="btn btn-primary btn-sm" onclick="openGantt(${p.id})">📊 Gantt</button>
-              ${canEdit   ? `<button class="btn btn-ghost btn-sm"  onclick="openEditById(${p.id})">✏️ Bearbeiten</button>` : ''}
-              ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteProjectById(${p.id})">🗑</button>` : ''}
+              <button class="btn btn-ghost btn-sm" onclick="exportProjectExcel(${p.id})" title="Als Excel exportieren">📊 XLS</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportProjectPdf(${p.id})" title="Als PDF exportieren">📄 PDF</button>
+              ${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="openEdit(${p.id}, ${JSON.stringify(p.name)}, ${JSON.stringify(p.description)}, '${start}', '${end}', '${color}')">✏️ Bearbeiten</button>` : ''}
+              ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id}, ${JSON.stringify(p.name)})">🗑</button>` : ''}
             </div>
           </div>`;
       }).join('');
@@ -485,6 +492,45 @@
 
     function openGantt(id) { window.location.href = `/pages/gantt.html?projectId=${id}`; }
     function logout() { clearToken(); window.location.href = '/index.html'; }
+    // ── Export-Funktionen ──────────────────────────────────────────────────
+    async function exportProjectExcel(projectId) {
+      const a = document.createElement('a');
+      a.href = `/api/export/excel/${projectId}`;
+      // Token als Query-Parameter mitgeben, da <a href> keinen Authorization-Header setzt
+      a.href = `/api/export/excel/${projectId}?token=${encodeURIComponent(getToken())}`;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    async function exportProjectPdf(projectId) {
+      const a = document.createElement('a');
+      a.href = `/api/export/pdf/${projectId}?token=${encodeURIComponent(getToken())}`;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    async function exportAllExcel() {
+      const a = document.createElement('a');
+      a.href = `/api/export/excel?token=${encodeURIComponent(getToken())}`;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    async function exportAllPdf() {
+      const a = document.createElement('a');
+      a.href = `/api/export/pdf?token=${encodeURIComponent(getToken())}`;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
 
     document.querySelectorAll('.modal-overlay').forEach(o =>
       o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
