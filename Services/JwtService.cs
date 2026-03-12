@@ -9,8 +9,8 @@ namespace ProjectPlanner.Services;
 
 public class JwtService
 {
-    private readonly IConfiguration       _config;
-    private readonly UserManager<AppUser>  _userManager;
+    private readonly IConfiguration      _config;
+    private readonly UserManager<AppUser> _userManager;
 
     public JwtService(IConfiguration config, UserManager<AppUser> userManager)
     {
@@ -18,10 +18,12 @@ public class JwtService
         _userManager = userManager;
     }
 
-    /// <summary>Generiert ein JWT mit den Identity-Rollen aus der Datenbank.</summary>
+    /// <summary>
+    /// Generiert ein JWT mit den Identity-Rollen aus der Datenbank.
+    /// Enthält zusätzlich MustChangePassword und PrivacyAccepted als Claims.
+    /// </summary>
     public string GenerateToken(AppUser user)
     {
-        // Identity-Rollen synchron aus DB lesen
         var roles = _userManager.GetRolesAsync(user).GetAwaiter().GetResult();
         var role  = roles.FirstOrDefault() ?? user.Role ?? "Student";
 
@@ -30,7 +32,9 @@ public class JwtService
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email,          user.Email ?? string.Empty),
             new(ClaimTypes.Name,           user.FullName),
-            new(ClaimTypes.Role,           role)
+            new(ClaimTypes.Role,           role),
+            new("mustChangePassword",      user.MustChangePassword.ToString().ToLower()),
+            new("privacyAccepted",         user.PrivacyAccepted.ToString().ToLower())
         };
 
         var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));

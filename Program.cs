@@ -13,7 +13,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseOracle(builder.Configuration.GetConnectionString("Default"),
         b => b.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19)));
-        
 
 // ── ASP.NET Identity (mit RoleManager) ───────────────────────────────────────
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
@@ -83,6 +82,23 @@ using (var scope = app.Services.CreateScope())
     {
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole(role));
+    }
+
+    // Standard-Arbeitszeitplan anlegen wenn noch keiner existiert
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (!await db.WorkSchedules.AnyAsync())
+    {
+        db.WorkSchedules.Add(new ProjectPlanner.Models.WorkSchedule
+        {
+            Name           = "Standard-Woche (Mo–Fr)",
+            ProjectId      = null,
+            WorkDaysMask   = 62, // Mo=2, Di=4, Mi=8, Do=16, Fr=32
+            DailyStartTime = "08:00",
+            DailyEndTime   = "17:00",
+            DailyHours     = 8,
+            IsDefault      = true
+        });
+        await db.SaveChangesAsync();
     }
 }
 

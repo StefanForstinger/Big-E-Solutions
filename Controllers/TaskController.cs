@@ -31,21 +31,24 @@ public class TaskController : ControllerBase
             .Where(t => t.ProjectId == projectId)
             .Select(t => new
             {
-                id           = t.Id,
-                text         = t.Title,
-                start_date   = t.StartDate.ToString("yyyy-MM-dd"),
-                end_date     = t.EndDate.ToString("yyyy-MM-dd"),
-                progress     = t.Progress / 100.0,
-                parent       = t.ParentId ?? 0,
-                priority     = t.Priority,
-                status       = t.Status,
-                type         = t.IsMilestone ? "milestone" : "task",
-                note         = t.Note,
-                assigneeId   = t.AssigneeId,
-                assigneeName = t.Assignee != null ? t.Assignee.FullName : null,
-                color        = t.Priority == "High"   ? "#E74C3C"
-                             : t.Priority == "Low"    ? "#27AE60"
-                             : (string?)null
+                id              = t.Id,
+                text            = t.Title,
+                start_date      = t.StartDate.ToString("yyyy-MM-dd"),
+                end_date        = t.EndDate.ToString("yyyy-MM-dd"),
+                progress        = t.Progress / 100.0,
+                parent          = t.ParentId ?? 0,
+                priority        = t.Priority,
+                status          = t.Status,
+                type            = t.IsMilestone ? "milestone" : "task",
+                note            = t.Note,
+                assigneeId      = t.AssigneeId,
+                assigneeName    = t.Assignee != null ? t.Assignee.FullName : null,
+                plannedDuration = t.PlannedDuration,
+                actualDuration  = t.ActualDuration,
+                workSharePercent = t.WorkSharePercent,
+                color           = t.Priority == "High" ? "#E74C3C"
+                                : t.Priority == "Low"  ? "#27AE60"
+                                : (string?)null
             })
             .ToListAsync();
 
@@ -57,27 +60,36 @@ public class TaskController : ControllerBase
         return Ok(new { data = tasks, links });
     }
 
-    // ── Task erstellen ───────────────────────────────────────────────────────
+    // ── Task erstellen (Schüler und Admin; Lehrer dürfen nicht) ─────────────
     [HttpPost]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Create(int projectId, [FromBody] TaskDto dto)
     {
-        var assigneeId = string.IsNullOrEmpty(dto.AssigneeId)
-            ? null
-            : dto.AssigneeId;
+        // Prüfen: Assignee muss Projektmitglied oder Owner sein
+        string? resolvedAssigneeId = null;
+        if (!string.IsNullOrEmpty(dto.AssigneeId))
+        {
+            var isMember = await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == dto.AssigneeId);
+            var isOwner  = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == dto.AssigneeId);
+            if (!isMember && !isOwner)
+                return BadRequest(new { error = "Die zugewiesene Person ist kein Mitglied dieses Projekts." });
+            resolvedAssigneeId = dto.AssigneeId;
+        }
 
         var task = new ProjectTask
         {
-            Title       = dto.Title,
-            StartDate   = dto.StartDate,
-            EndDate     = dto.EndDate,
-            Progress    = Math.Clamp(dto.Progress, 0, 100),
-            ParentId    = dto.ParentId,
-            Priority    = dto.Priority    ?? "Medium",
-            Status      = dto.Status      ?? "Open",
-            IsMilestone = dto.IsMilestone ?? false,
-            Note        = dto.Note,
-            ProjectId   = projectId,
-            AssigneeId  = assigneeId
+            Title           = dto.Title,
+            StartDate       = dto.StartDate,
+            EndDate         = dto.EndDate,
+            Progress        = Math.Clamp(dto.Progress, 0, 100),
+            ParentId        = dto.ParentId,
+            Priority        = dto.Priority    ?? "Medium",
+            Status          = dto.Status      ?? "Open",
+            IsMilestone     = dto.IsMilestone ?? false,
+            Note            = dto.Note,
+            ProjectId       = projectId,
+            AssigneeId      = resolvedAssigneeId,
+            PlannedDuration = dto.PlannedDuration
         };
 
         _db.Tasks.Add(task);
@@ -85,46 +97,57 @@ public class TaskController : ControllerBase
         return Ok(new { tid = task.Id });
     }
 
-    // ── Task aktualisieren ───────────────────────────────────────────────────
+    // ── Task aktualisieren (Lehrer dürfen nicht) ─────────────────────────────
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Update(int projectId, int id, [FromBody] TaskDto dto)
     {
         var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == id && t.ProjectId == projectId);
         if (task == null) return NotFound();
+
+        // Prüfen: neuer Assignee muss Projektmitglied oder Owner sein
+        if (dto.AssigneeId != null && dto.AssigneeId != "")
+        {
+            var isMember = await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == dto.AssigneeId);
+            var isOwner  = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == dto.AssigneeId);
+            if (!isMember && !isOwner)
+                return BadRequest(new { error = "Die zugewiesene Person ist kein Mitglied dieses Projekts." });
+        }
 
         task.Title      = dto.Title;
         task.StartDate  = dto.StartDate;
         task.EndDate    = dto.EndDate;
         task.Progress   = Math.Clamp(dto.Progress, 0, 100);
         task.ParentId   = dto.ParentId;
-        if (dto.Priority    != null) task.Priority    = dto.Priority;
-        if (dto.Status      != null) task.Status      = dto.Status;
-        if (dto.IsMilestone != null) task.IsMilestone = dto.IsMilestone.Value;
-        if (dto.Note        != null) task.Note        = dto.Note;
-        if (dto.AssigneeId  != null) task.AssigneeId  = dto.AssigneeId == "" ? null : dto.AssigneeId;
+        if (dto.Priority        != null) task.Priority        = dto.Priority;
+        if (dto.Status          != null) task.Status          = dto.Status;
+        if (dto.IsMilestone     != null) task.IsMilestone     = dto.IsMilestone.Value;
+        if (dto.Note            != null) task.Note            = dto.Note;
+        if (dto.AssigneeId      != null) task.AssigneeId      = dto.AssigneeId == "" ? null : dto.AssigneeId;
+        if (dto.PlannedDuration != null) task.PlannedDuration = dto.PlannedDuration;
 
         await _db.SaveChangesAsync();
         return Ok(task);
     }
 
-    // ── Task löschen ─────────────────────────────────────────────────────────
+    // ── Task löschen (Lehrer dürfen nicht) ──────────────────────────────────
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Delete(int projectId, int id)
     {
         var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == id && t.ProjectId == projectId);
         if (task == null) return NotFound();
 
-        // Links dazu auch löschen
         var links = _db.TaskLinks.Where(l => l.Source == id || l.Target == id);
         _db.TaskLinks.RemoveRange(links);
-
         _db.Tasks.Remove(task);
         await _db.SaveChangesAsync();
         return NoContent();
     }
 
-    // ── Link erstellen ───────────────────────────────────────────────────────
+    // ── Link erstellen (Lehrer dürfen nicht) ─────────────────────────────────
     [HttpPost("links")]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> CreateLink(int projectId, [FromBody] LinkDto dto)
     {
         var link = new TaskLink
@@ -139,8 +162,9 @@ public class TaskController : ControllerBase
         return Ok(new { tid = link.Id });
     }
 
-    // ── Link löschen ─────────────────────────────────────────────────────────
+    // ── Link löschen (Lehrer dürfen nicht) ───────────────────────────────────
     [HttpDelete("links/{linkId:int}")]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> DeleteLink(int projectId, int linkId)
     {
         var link = await _db.TaskLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.ProjectId == projectId);
@@ -172,7 +196,7 @@ public class TaskController : ControllerBase
     [HttpPost("{id:int}/comments")]
     public async Task<IActionResult> AddComment(int projectId, int id, [FromBody] CommentDto dto)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var comment = new TaskComment
         {
             Text      = dto.Text,
@@ -196,8 +220,8 @@ public class TaskController : ControllerBase
     [HttpDelete("{id:int}/comments/{commentId:int}")]
     public async Task<IActionResult> DeleteComment(int projectId, int id, int commentId)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var role   = User.FindFirstValue(ClaimTypes.Role)!;
+        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var role    = User.FindFirstValue(ClaimTypes.Role)!;
         var comment = await _db.TaskComments.FirstOrDefaultAsync(c => c.Id == commentId && c.TaskId == id);
         if (comment == null) return NotFound();
         if (comment.UserId != userId && role is not ("Admin" or "Teacher")) return Forbid();
@@ -214,11 +238,12 @@ public record TaskDto(
     DateTime  EndDate,
     int       Progress,
     int?      ParentId,
-    string?   AssigneeId  = null,
-    string?   Priority    = null,
-    string?   Status      = null,
-    bool?     IsMilestone = null,
-    string?   Note        = null
+    string?   AssigneeId      = null,
+    string?   Priority        = null,
+    string?   Status          = null,
+    bool?     IsMilestone     = null,
+    string?   Note            = null,
+    decimal?  PlannedDuration = null
 );
 public record LinkDto(int Source, int Target, string? Type);
 public record CommentDto(string Text);
