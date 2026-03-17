@@ -24,45 +24,55 @@
 
     <!-- Login -->
     <div id="tab-login">
-      <div class="form-group">
-        <label for="l-email">E-Mail</label>
-        <input id="l-email" type="email" placeholder="name@schule.at" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <label for="l-pass">Passwort</label>
-        <input id="l-pass" type="password" placeholder="Passwort" autocomplete="current-password">
-      </div>
-      <button id="btn-login" class="btn btn-primary btn-full btn-lg" onclick="login()">
-        Einloggen
-      </button>
+      <form id="login-form" onsubmit="event.preventDefault(); login();">
+        <div class="form-group">
+          <label for="l-email">E-Mail</label>
+          <input id="l-email" name="email" type="email" placeholder="name@schule.at" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label for="l-pass">Passwort</label>
+          <input id="l-pass" name="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
+        </div>
+        <button id="btn-login" type="submit" class="btn btn-primary btn-full btn-lg">
+          Einloggen
+        </button>
+      </form>
       <div id="msg-login" class="alert alert-hidden"></div>
     </div>
 
     <!-- Register -->
     <div id="tab-register" class="d-none">
-      <div class="form-group">
-        <label for="r-name">Vollständiger Name</label>
-        <input id="r-name" type="text" placeholder="Max Mustermann">
-      </div>
-      <div class="form-group">
-        <label for="r-email">E-Mail</label>
-        <input id="r-email" type="email" placeholder="name@schule.at">
-      </div>
-      <div class="form-group">
-        <label for="r-pass">Passwort <span class="text-muted">(min. 6 Zeichen, 1 Zahl)</span></label>
-        <input id="r-pass" type="password" placeholder="Passwort wählen">
-      </div>
-      <!-- FIX: Datenschutz-Checkbox – Button bleibt deaktiviert bis akzeptiert -->
-      <div class="form-group" style="display:flex;align-items:flex-start;gap:.6rem;margin-top:.25rem">
-        <input id="r-privacy" type="checkbox" style="margin-top:3px;width:16px;height:16px;flex-shrink:0"
-               onchange="document.getElementById('btn-register').disabled = !this.checked">
-        <label for="r-privacy" style="font-size:.85rem;color:var(--gray-700);cursor:pointer">
-          Ich akzeptiere die <a href="#" onclick="alert('Datenschutzbestimmungen:\n\nDeine Daten werden ausschließlich für den Schulbetrieb verwendet und nicht an Dritte weitergegeben.');return false;" style="color:var(--accent)">Datenschutzbestimmungen</a>
-        </label>
-      </div>
-      <button id="btn-register" class="btn btn-success btn-full btn-lg" onclick="register()" disabled>
-        Konto erstellen
-      </button>
+      <form id="register-form" onsubmit="event.preventDefault(); register();">
+        <div class="form-group">
+          <label for="r-name">Vollständiger Name</label>
+          <input id="r-name" name="name" type="text" placeholder="Max Mustermann" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label for="r-email">E-Mail</label>
+          <input id="r-email" name="email" type="email" placeholder="name@schule.at" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label for="r-pass">Passwort <span class="text-muted">(min. 6 Zeichen, 1 Zahl)</span></label>
+          <input id="r-pass" name="password" type="password" placeholder="Passwort wählen" autocomplete="new-password" required>
+        </div>
+        <!-- FIX: Datenschutz-Checkbox – Button bleibt deaktiviert bis akzeptiert -->
+        <div class="form-group" style="display:flex;align-items:flex-start;gap:.6rem;margin-top:.25rem">
+          <input id="r-privacy" type="checkbox" style="margin-top:3px;width:16px;height:16px;flex-shrink:0"
+                 onchange="toggleRegisterButton()">
+          <label for="r-privacy" style="font-size:.85rem;color:var(--gray-700);cursor:pointer">
+            Ich akzeptiere die <a href="#" onclick="alert('Datenschutzbestimmungen:\n\nDeine Daten werden ausschließlich für den Schulbetrieb verwendet und nicht an Dritte weitergegeben.');return false;" style="color:var(--accent)">Datenschutzbestimmungen</a>
+          </label>
+        </div>
+        <div id="msg-privacy" class="alert alert-hidden" style="margin-top:0.5rem"></div>
+        <div style="position: relative;">
+          <button id="btn-register" type="submit" class="btn btn-success btn-full btn-lg" disabled>
+            Konto erstellen
+          </button>
+          <!-- Unsichtbare Overlay um Klicks abzufangen wenn Button disabled ist -->
+          <div id="register-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; cursor: not-allowed; display: block;" 
+               onclick="checkPrivacyBeforeRegister()"></div>
+        </div>
+      </form>
       <div id="msg-register" class="alert alert-hidden"></div>
     </div>
   </div>
@@ -79,6 +89,24 @@
         b.classList.toggle('active', (i === 0) === (tab === 'login')));
       hideAlert('msg-login');
       hideAlert('msg-register');
+      hideAlert('msg-privacy');
+    }
+
+    function toggleRegisterButton() {
+      const privacyChecked = document.getElementById('r-privacy').checked;
+      const registerBtn = document.getElementById('btn-register');
+      const overlay = document.getElementById('register-overlay');
+      
+      registerBtn.disabled = !privacyChecked;
+      overlay.style.display = privacyChecked ? 'none' : 'block';
+      hideAlert('msg-privacy');
+    }
+
+    function checkPrivacyBeforeRegister() {
+      const privacy = document.getElementById('r-privacy').checked;
+      if (!privacy) {
+        showAlert('msg-privacy', 'Bitte akzeptiere die Datenschutzbestimmungen, um fortzufahren.', 'error');
+      }
     }
 
     async function login() {
@@ -119,7 +147,12 @@
       const privacy = document.getElementById('r-privacy').checked;
 
       if (!name || !email || !pass) { showAlert('msg-register', 'Bitte alle Felder ausfüllen.'); return; }
-      if (!privacy) { showAlert('msg-register', 'Bitte Datenschutzbestimmungen akzeptieren.'); return; }
+      
+      // Datenschutz-Validierung mit sichtbarer Fehlermeldung
+      if (!privacy) { 
+        showAlert('msg-privacy', 'Bitte akzeptiere die Datenschutzbestimmungen, um fortzufahren.', 'error'); 
+        return; 
+      }
 
       setLoading('btn-register', true);
       try {
@@ -144,11 +177,17 @@
       }
     }
 
-    // Enter-Taste
+    // Enter-Taste - funktioniert jetzt auch mit Forms
     document.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
       const registerVisible = !document.getElementById('tab-register').classList.contains('d-none');
-      registerVisible ? register() : login();
+      if (registerVisible) {
+        const privacyChecked = document.getElementById('r-privacy').checked;
+        if (!privacyChecked) {
+          e.preventDefault();
+          showAlert('msg-privacy', 'Bitte akzeptiere die Datenschutzbestimmungen, um fortzufahren.', 'error');
+        }
+      }
     });
   </script>
 </body>
