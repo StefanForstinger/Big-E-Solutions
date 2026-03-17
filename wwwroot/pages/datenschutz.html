@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Projektplaner – Datenschutzerklärung (DSGVO)</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <style>
+        /* ── Seiten-Grundlayout ── */
+        .dsgvo-page {
+            min-height: 100vh;
+            background: var(--bg, #F3F4F6);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Hero-Banner ── */
+        .dsgvo-hero {
+            background: linear-gradient(135deg, #1E3A5F 0%, #2D6A9F 100%);
+            color: #fff;
+            padding: 3.5rem 1.5rem 3rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .dsgvo-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .dsgvo-hero .hero-shield {
+            font-size: 3rem;
+            margin-bottom: .75rem;
+            display: block;
+            animation: floatIn .6s ease both;
+        }
+        .dsgvo-hero h1 {
+            color: #fff;
+            font-size: 2rem;
+            margin-bottom: .4rem;
+            animation: floatIn .6s .1s ease both;
+        }
+        .dsgvo-hero p {
+            color: rgba(255,255,255,.65);
+            font-size: .95rem;
+            animation: floatIn .6s .2s ease both;
+        }
+        .dsgvo-hero .badge-dsgvo {
+            display: inline-block;
+            margin-top: .9rem;
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.25);
+            border-radius: 20px;
+            padding: .3rem 1rem;
+            font-size: .8rem;
+            color: rgba(255,255,255,.8);
+            animation: floatIn .6s .3s ease both;
+        }
+        @keyframes floatIn {
+            from { opacity:0; transform:translateY(12px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+
+        /* ── Inhaltsbereich ── */
+        .dsgvo-content {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 4rem;
+            flex: 1;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            color: #2D6A9F;
+            font-size: .9rem;
+            font-weight: 600;
+            text-decoration: none;
+            margin-bottom: 1.8rem;
+            padding: .4rem .7rem;
+            border-radius: 6px;
+            transition: background .15s;
+        }
+        .back-link:hover { background: #E5ECF6; }
+
+        /* ── TOC ── */
+        .toc-card {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 10px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .toc-card h3 {
+            font-size: .88rem;
+            color: #1E40AF;
+            margin-bottom: .75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+        .toc-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .3rem .75rem;
+        }
+        .toc-list li a {
+            color: #1D4ED8;
+            font-size: .85rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .2rem 0;
+            border-bottom: 1px dashed transparent;
+            transition: border-color .15s, color .15s;
+        }
+        .toc-list li a:hover { color: #1E3A5F; border-bottom-color: #93C5FD; }
+        @media(max-width:500px) { .toc-list { grid-template-columns: 1fr; } }
+
+        /* ── Abschnittskarten ── */
+        .dsgvo-section {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.04);
+            padding: 1.6rem 1.8rem;
+            margin-bottom: 1.2rem;
+            border-left: 4px solid #2D6A9F;
+            transition: box-shadow .2s, transform .2s;
+        }
+        .dsgvo-section:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,.1);
+            transform: translateY(-1px);
+        }
+        .dsgvo-section.highlight { border-left-color: #27AE60; }
+        .dsgvo-section.warning   { border-left-color: #F39C12; }
+        .dsgvo-section.neutral   { border-left-color: #8E44AD; }
+
+        .dsgvo-section h2 {
+            font-size: 1rem;
+            color: #1E3A5F;
+            margin-bottom: .9rem;
+            padding-bottom: .6rem;
+            border-bottom: 2px solid #F3F4F6;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .section-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            background: #1E3A5F;
+            color: #fff;
+            border-radius: 50%;
+            font-size: .7rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .dsgvo-section p,
+        .dsgvo-section li {
+            font-size: .9rem;
+            color: #374151;
+            line-height: 1.75;
+        }
+        .dsgvo-section ul {
+            padding-left: 1.2rem;
+            margin: .5rem 0;
+        }
+        .dsgvo-section ul li::marker { color: #2D6A9F; }
+        .dsgvo-section a { color: #2D6A9F; }
+        .dsgvo-section a:hover { text-decoration: underline; }
+
+        /* ── Info-Box ── */
+        .info-box {
+            background: #EFF6FF;
+            border-left: 3px solid #2D6A9F;
+            border-radius: 0 8px 8px 0;
+            padding: .85rem 1.1rem;
+            font-size: .86rem;
+            color: #1D4ED8;
+            margin-top: 1rem;
+        }
+        .info-box.green {
+            background: #F0FDF4;
+            border-left-color: #16A34A;
+            color: #15803D;
+        }
+        .info-box.yellow {
+            background: #FEFCE8;
+            border-left-color: #CA8A04;
+            color: #854D0E;
+        }
+
+        /* ── Datentabelle ── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .85rem;
+            margin-top: .75rem;
+        }
+        .data-table th {
+            background: #1E3A5F;
+            color: #fff;
+            padding: .6rem .85rem;
+            text-align: left;
+            font-weight: 600;
+        }
+        .data-table td {
+            padding: .55rem .85rem;
+            border-bottom: 1px solid #E5E7EB;
+            color: #374151;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:nth-child(even) td { background: #F9FAFB; }
+
+        /* ── Rechte-Grid ── */
+        .rights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: .75rem;
+            margin-top: .75rem;
+        }
+        .right-card {
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: .85rem 1rem;
+        }
+        .right-card .right-icon { font-size: 1.4rem; margin-bottom: .35rem; display: block; }
+        .right-card strong { font-size: .85rem; color: #1E3A5F; display: block; margin-bottom: .2rem; }
+        .right-card span { font-size: .78rem; color: #6B7280; line-height: 1.5; display: block; }
+
+        /* ── Stand-Hinweis ── */
+        .last-updated {
+            text-align: center;
+            font-size: .8rem;
+            color: #9CA3AF;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        /* ── Footer ── */
+        .dsgvo-footer {
+            background: #1E3A5F;
+            color: rgba(255,255,255,.55);
+            text-align: center;
+            font-size: .82rem;
+            padding: 1.2rem;
+        }
+        .dsgvo-footer a { color: rgba(255,255,255,.7); text-decoration: none; }
+        .dsgvo-footer a:hover { color: #fff; text-decoration: underline; }
+        .dsgvo-footer .sep { margin: 0 .5rem; opacity: .4; }
+    </style>
+</head>
+<body class="dsgvo-page">
+
+<!-- Navbar -->
+<nav class="navbar">
+    <a href="/index.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
+    <div class="navbar-right">
+        <a href="/index.html" style="color:rgba(255,255,255,.8); font-size:.9rem;">← Zurück zur Anmeldung</a>
+    </div>
+</nav>
+
+<!-- Hero -->
+<div class="dsgvo-hero">
+    <span class="hero-shield">🔒</span>
+    <h1>Datenschutzerklärung</h1>
+    <p>Informationen gemäß DSGVO (EU) 2016/679 &amp; DSG 2018 (Österreich)</p>
+    <span class="badge-dsgvo">Stand: März 2025 · Projektplaner v1.0</span>
+</div>
+
+<!-- Inhalt -->
+<div class="dsgvo-content">
+
+    <a href="/index.html" class="back-link">← Zurück zur Startseite</a>
+
+    <!-- Inhaltsverzeichnis -->
+    <div class="toc-card">
+        <h3>📑 Inhaltsverzeichnis</h3>
+        <ul class="toc-list">
+            <li><a href="#s1">① Verantwortlicher</a></li>
+            <li><a href="#s2">② Erhobene Daten</a></li>
+            <li><a href="#s3">③ Zweck der Verarbeitung</a></li>
+            <li><a href="#s4">④ Rechtsgrundlage</a></li>
+            <li><a href="#s5">⑤ Speicherung &amp; Löschung</a></li>
+            <li><a href="#s6">⑥ Weitergabe an Dritte</a></li>
+            <li><a href="#s7">⑦ Cookies &amp; LocalStorage</a></li>
+            <li><a href="#s8">⑧ Ihre Rechte</a></li>
+            <li><a href="#s9">⑨ Sicherheit</a></li>
+            <li><a href="#s10">⑩ Kontakt &amp; Beschwerden</a></li>
+        </ul>
+    </div>
+
+    <!-- 1. Verantwortlicher -->
+    <div class="dsgvo-section" id="s1">
+        <h2><span class="section-num">1</span> Verantwortlicher (Art. 13 DSGVO)</h2>
+        <p>Verantwortlich für die Verarbeitung personenbezogener Daten in dieser Anwendung ist:</p>
+        <p style="margin-top:.6rem">
+            <strong>Berufsschule Linz 2</strong><br>
+            Wienerstraße 181, 4020 Linz, Österreich<br>
+            E-Mail: <a href="mailto:stefan.forstinger@students.bs-linz2.ac.at">stefan.forstinger@students.bs-linz2.ac.at</a><br>
+            Web: <a href="https://bs-linz2.ac.at" target="_blank" rel="noopener">bs-linz2.ac.at</a>
+        </p>
+        <div class="info-box">
+            ℹ️ Die Anwendung <em>Projektplaner</em> wurde im Rahmen eines Schulprojekts an der BS Linz 2 entwickelt und wird ausschließlich im schulischen Umfeld betrieben.
+        </div>
+    </div>
+
+    <!-- 2. Erhobene Daten -->
+    <div class="dsgvo-section" id="s2">
+        <h2><span class="section-num">2</span> Welche Daten werden verarbeitet?</h2>
+        <p>Die Anwendung verarbeitet ausschließlich die folgenden personenbezogenen Daten:</p>
+        <table class="data-table">
+            <thead>
+            <tr><th>Datenkategorie</th><th>Beispiel / Details</th><th>Erforderlich?</th></tr>
+            </thead>
+            <tbody>
+            <tr><td>Vollständiger Name</td><td>z.B. „Max Mustermann"</td><td>✅ Ja</td></tr>
+            <tr><td>E-Mail-Adresse</td><td>Schuladresse (@students.bs-linz2.ac.at)</td><td>✅ Ja</td></tr>
+            <tr><td>Passwort (gehasht)</td><td>Nur als bcrypt-Hash gespeichert</td><td>✅ Ja</td></tr>
+            <tr><td>Benutzerrolle</td><td>Student / Teacher / Admin</td><td>✅ Ja</td></tr>
+            <tr><td>Projektdaten</td><td>Projektnamen, Beschreibungen, Aufgaben</td><td>Bei Nutzung</td></tr>
+            <tr><td>Kommentare</td><td>Freitext-Kommentare zu Aufgaben</td><td>Freiwillig</td></tr>
+            <tr><td>Authentifizierungs-Token</td><td>JWT, im localStorage gespeichert</td><td>Technisch nötig</td></tr>
+            </tbody>
+        </table>
+        <div class="info-box green" style="margin-top:.9rem">
+            ✅ Es werden <strong>keine</strong> Standortdaten, Geräteinformationen, IP-Adressen oder sonstige technische Tracking-Daten gespeichert.
+        </div>
+    </div>
+
+    <!-- 3. Zweck -->
+    <div class="dsgvo-section highlight" id="s3">
+        <h2><span class="section-num" style="background:#27AE60">3</span> Zweck der Datenverarbeitung</h2>
+        <p>Ihre Daten werden ausschließlich für folgende Zwecke verwendet:</p>
+        <ul>
+            <li><strong>Authentifizierung &amp; Zugriffskontrolle</strong> – Anmeldung und rollenbasierter Zugang (Student / Teacher / Admin)</li>
+            <li><strong>Projektverwaltung</strong> – Erstellung, Bearbeitung und Zuweisung von Projekten &amp; Aufgaben</li>
+            <li><strong>Gantt-Diagramme</strong> – Visualisierung von Projektzeitplänen und Fortschritten</li>
+            <li><strong>Kommentarfunktion</strong> – Kommunikation und Feedback zu einzelnen Aufgaben</li>
+            <li><strong>Export-Funktionen</strong> – Ausgabe von Projektdaten als Excel- oder PDF-Dateien</li>
+        </ul>
+        <div class="info-box">
+            ℹ️ Eine Verarbeitung zu anderen Zwecken (z.B. Werbung, Profiling, Weiterverkauf) findet <strong>nicht</strong> statt.
+        </div>
+    </div>
+
+    <!-- 4. Rechtsgrundlage -->
+    <div class="dsgvo-section" id="s4">
+        <h2><span class="section-num">4</span> Rechtsgrundlage (Art. 6 DSGVO)</h2>
+        <p>Die Verarbeitung Ihrer personenbezogenen Daten erfolgt auf Basis folgender Rechtsgrundlagen:</p>
+        <ul>
+            <li><strong>Art. 6 Abs. 1 lit. b DSGVO</strong> – Vertragserfüllung: Die Verarbeitung ist zur Bereitstellung der Anwendungsfunktionen erforderlich.</li>
+            <li><strong>Art. 6 Abs. 1 lit. a DSGVO</strong> – Einwilligung: Durch die freiwillige Registrierung erklären Sie sich mit der Verarbeitung einverstanden.</li>
+            <li><strong>Art. 6 Abs. 1 lit. f DSGVO</strong> – Berechtigtes Interesse: Sicherstellung des ordnungsgemäßen Schulbetriebs.</li>
+        </ul>
+    </div>
+
+    <!-- 5. Speicherdauer -->
+    <div class="dsgvo-section warning" id="s5">
+        <h2><span class="section-num" style="background:#F39C12">5</span> Speicherdauer &amp; Löschung</h2>
+        <p>Ihre Daten werden gespeichert, solange:</p>
+        <ul>
+            <li>Ihr Konto in der Anwendung aktiv ist, <strong>oder</strong></li>
+            <li>die Anwendung im schulischen Betrieb aktiv genutzt wird.</li>
+        </ul>
+        <p style="margin-top:.6rem">Nach Beendigung des Schulprojekts bzw. auf Ihren Wunsch werden alle personenbezogenen Daten vollständig gelöscht. Das Löschen des Kontos können Sie jederzeit per E-Mail an den Verantwortlichen beantragen.</p>
+        <div class="info-box yellow">
+            ⚠️ JWT-Token im <code>localStorage</code> werden beim Abmelden automatisch gelöscht. Sie können Ihren Browser-Speicher jederzeit selbst leeren.
+        </div>
+    </div>
+
+    <!-- 6. Weitergabe -->
+    <div class="dsgvo-section" id="s6">
+        <h2><span class="section-num">6</span> Weitergabe an Dritte</h2>
+        <p>Eine Weitergabe Ihrer personenbezogenen Daten an Dritte findet <strong>nicht</strong> statt. Ausnahmen bestehen nur in folgenden gesetzlich geregelten Fällen:</p>
+        <ul>
+            <li>Wenn eine gesetzliche Verpflichtung zur Herausgabe besteht (z.B. behördliche Anordnung)</li>
+            <li>Wenn Sie ausdrücklich in die Weitergabe eingewilligt haben</li>
+        </ul>
+        <p style="margin-top:.6rem">Es werden keine externen Analyse-, Werbe- oder Social-Media-Dienste eingebunden.</p>
+    </div>
+
+    <!-- 7. Cookies / LocalStorage -->
+    <div class="dsgvo-section neutral" id="s7">
+        <h2><span class="section-num" style="background:#8E44AD">7</span> Cookies &amp; LocalStorage</h2>
+        <p>Diese Anwendung verwendet <strong>keine Tracking-Cookies</strong> und keine Cookies von Drittanbietern.</p>
+        <p style="margin-top:.6rem">Zur Aufrechterhaltung Ihrer Anmeldesitzung wird ausschließlich der <strong>Browser-LocalStorage</strong> verwendet, in dem ein signiertes JWT (JSON Web Token) gespeichert wird.</p>
+        <table class="data-table" style="margin-top:.75rem">
+            <thead>
+            <tr><th>Speicherort</th><th>Inhalt</th><th>Lebensdauer</th></tr>
+            </thead>
+            <tbody>
+            <tr><td><code>localStorage</code></td><td>JWT-Authentifizierungstoken (Name, Rolle)</td><td>Bis zur Abmeldung oder manuellem Löschen</td></tr>
+            </tbody>
+        </table>
+        <div class="info-box">
+            ℹ️ Das Token enthält Ihren Namen und Ihre Rolle, jedoch <strong>kein Passwort</strong>. Es dient ausschließlich der Authentifizierung gegenüber dem Backend.
+        </div>
+    </div>
+
+    <!-- 8. Ihre Rechte -->
+    <div class="dsgvo-section highlight" id="s8">
+        <h2><span class="section-num" style="background:#27AE60">8</span> Ihre Rechte als betroffene Person</h2>
+        <p>Gemäß der DSGVO stehen Ihnen folgende Rechte zu:</p>
+        <div class="rights-grid">
+            <div class="right-card">
+                <span class="right-icon">👁️</span>
+                <strong>Auskunft (Art. 15)</strong>
+                <span>Recht auf Information, welche Daten über Sie gespeichert sind.</span>
+            </div>
+            <div class="right-card">
+                <span class="right-icon">✏️</span>
+                <strong>Berichtigung (Art. 16)</strong>
+                <span>Recht auf Korrektur unrichtiger personenbezogener Daten.</span>
+            </div>
+            <div class="right-card">
+                <span class="right-icon">🗑️</span>
+                <strong>Löschung (Art. 17)</strong>
+                <span>Recht auf Löschung Ihrer Daten („Recht auf Vergessenwerden").</span>
+            </div>
+            <div class="right-card">
+                <span class="right-icon">⏸️</span>
+                <strong>Einschränkung (Art. 18)</strong>
+                <span>Recht auf Einschränkung der Verarbeitung unter bestimmten Bedingungen.</span>
+            </div>
+            <div class="right-card">
+                <span class="right-icon">📦</span>
+                <strong>Datenportabilität (Art. 20)</strong>
+                <span>Recht, Ihre Daten in einem strukturierten Format zu erhalten.</span>
+            </div>
+            <div class="right-card">
+                <span class="right-icon">🚫</span>
+                <strong>Widerspruch (Art. 21)</strong>
+                <span>Recht auf Widerspruch gegen die Verarbeitung Ihrer Daten.</span>
+            </div>
+        </div>
+        <p style="margin-top:1rem">Zur Ausübung Ihrer Rechte wenden Sie sich bitte per E-Mail an:
+            <a href="mailto:stefan.forstinger@students.bs-linz2.ac.at">stefan.forstinger@students.bs-linz2.ac.at</a>
+        </p>
+        <div class="info-box">
+            ℹ️ Wir bearbeiten Ihr Anliegen so rasch wie möglich, spätestens jedoch innerhalb von <strong>30 Tagen</strong> gemäß Art. 12 DSGVO.
+        </div>
+    </div>
+
+    <!-- 9. Sicherheit -->
+    <div class="dsgvo-section" id="s9">
+        <h2><span class="section-num">9</span> Datensicherheit (Art. 32 DSGVO)</h2>
+        <p>Wir treffen angemessene technische und organisatorische Maßnahmen, um Ihre Daten zu schützen:</p>
+        <ul>
+            <li><strong>Passwort-Hashing</strong> mit bcrypt – Klartextpasswörter werden niemals gespeichert</li>
+            <li><strong>JWT-basierte Authentifizierung</strong> mit signierten Token</li>
+            <li><strong>Rollenbasierte Zugriffskontrolle</strong> – jede Rolle sieht nur die für sie freigegebenen Daten</li>
+            <li><strong>HTTPS-Empfehlung</strong> – Der Betrieb über verschlüsselte Verbindungen wird empfohlen</li>
+            <li><strong>Keine Speicherung</strong> von Passwörtern, Zahlungsdaten oder sensiblen Gesundheitsdaten</li>
+        </ul>
+        <div class="info-box yellow">
+            ⚠️ Da es sich um eine Schulanwendung handelt, erfolgt der Betrieb ohne professionelle Hosting-Infrastruktur. Im Produktiveinsatz empfehlen wir zusätzliche Sicherheitsmaßnahmen (WAF, regelmäßige Backups, Penetration Testing).
+        </div>
+    </div>
+
+    <!-- 10. Kontakt & Beschwerden -->
+    <div class="dsgvo-section" id="s10">
+        <h2><span class="section-num">10</span> Kontakt &amp; Beschwerderecht</h2>
+        <p>Bei Fragen, Anliegen oder Beschwerden zur Datenverarbeitung wenden Sie sich bitte an:</p>
+        <p style="margin-top:.6rem">
+            <strong>Stefan Forstinger</strong> (Projektverantwortlicher)<br>
+            E-Mail: <a href="mailto:stefan.forstinger@students.bs-linz2.ac.at">stefan.forstinger@students.bs-linz2.ac.at</a>
+        </p>
+        <p style="margin-top:.9rem">Sie haben zudem das Recht, eine <strong>Beschwerde</strong> bei der österreichischen Datenschutzbehörde einzureichen:</p>
+        <p style="margin-top:.4rem">
+            <strong>Österreichische Datenschutzbehörde</strong><br>
+            Barichgasse 40–42, 1030 Wien<br>
+            E-Mail: <a href="mailto:dsb@dsb.gv.at">dsb@dsb.gv.at</a><br>
+            Web: <a href="https://www.dsb.gv.at" target="_blank" rel="noopener">www.dsb.gv.at</a>
+        </p>
+    </div>
+
+    <p class="last-updated">
+        Diese Datenschutzerklärung wurde zuletzt am <strong>März 2025</strong> aktualisiert.<br>
+        Wir behalten uns das Recht vor, diese Erklärung jederzeit anzupassen.
+    </p>
+
+</div>
+
+<!-- Footer -->
+<footer class="dsgvo-footer">
+    © 2025 Projektplaner · Berufsschule Eigenentwicklung
+    <span class="sep">·</span>
+    <a href="/pages/impressum.html">Impressum</a>
+    <span class="sep">·</span>
+    <a href="/pages/datenschutz.html">Datenschutz</a>
+</footer>
+
+</body>
+</html>
