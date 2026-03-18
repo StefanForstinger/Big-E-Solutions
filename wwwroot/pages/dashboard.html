@@ -104,8 +104,8 @@
         <p class="text-muted mt-1" id="page-sub">Verwalte deine Projekte und Aufgaben</p>
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-        <button class="btn btn-ghost btn-sm" onclick="exportAllExcel()" title="Alle Projekte als Excel exportieren">      <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>#128202; Excel</button>
-        <button class="btn btn-ghost btn-sm" onclick="exportAllPdf()" title="Alle Projekte als PDF exportieren">      <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>#128196; PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportAllExcel()" title="Alle Projekte als Excel exportieren">Excel Export</button> 
+        <button class="btn btn-ghost btn-sm" onclick="exportAllPdf()" title="Alle Projekte als PDF exportieren">PDF Export</button>
         <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>
       </div>
     </div>
@@ -186,7 +186,7 @@
     roleEl.className = 'role-badge role-' + currentRole.toLowerCase();
 
     // Lehrer dürfen keine Projekte erstellen
-    if (currentRole === 'Student' || currentRole === 'Teacher') {
+    if (currentRole === 'Teacher') {
       document.getElementById('btn-new-project').style.display = 'none';
     }
     if (currentRole === 'Student') {
