@@ -57,6 +57,10 @@
     .swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:border-color .15s,transform .15s; }
     .swatch:hover { transform:scale(1.15); }
     .swatch.selected { border-color:var(--navy); }
+
+    .page-wrapper {
+      padding-bottom: 3rem;
+    }
   </style>
 </head>
 <body>
@@ -537,5 +541,39 @@
 
     loadProjects();
   </script>
+
+  <style>
+    .auth-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: .75rem 1rem;
+      font-size: .8rem;
+      color: rgba(255,255,255,.45);
+      background: #1E3A5F;
+      backdrop-filter: blur(4px);
+    }
+    .auth-footer a {
+      color: rgba(255,255,255,.65);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color .2s;
+    }
+    .auth-footer a:hover {
+      color: rgba(255,255,255,.95);
+      text-decoration: underline;
+    }
+    .auth-footer .sep { margin: 0 .5rem; opacity: .4; }
+  </style>
+
+  <footer class="auth-footer">
+    © 2025 Projektplaner · Berufsschule Eigenentwicklung
+    <span class="sep">·</span>
+    <a href="/pages/impressum.html">Impressum</a>
+    ·
+    <a href="/pages/datenschutz.html">Datenschutz</a>
+  </footer>
 </body>
 </html>

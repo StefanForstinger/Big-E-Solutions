@@ -77,6 +77,40 @@
     </div>
   </div>
 
+  <style>
+    .auth-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: .75rem 1rem;
+      font-size: .8rem;
+      color: rgba(255,255,255,.45);
+      background: rgba(0,0,0,.15);
+      backdrop-filter: blur(4px);
+    }
+    .auth-footer a {
+      color: rgba(255,255,255,.65);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color .2s;
+    }
+    .auth-footer a:hover {
+      color: rgba(255,255,255,.95);
+      text-decoration: underline;
+    }
+    .auth-footer .sep { margin: 0 .5rem; opacity: .4; }
+  </style>
+
+  <footer class="auth-footer">
+    © 2025 Projektplaner · Berufsschule Eigenentwicklung
+    <span class="sep">·</span>
+    <a href="/pages/impressum.html">Impressum</a>
+    ·
+    <a href="/pages/datenschutz.html">Datenschutz</a>
+  </footer>
+  
   <script src="/js/api.js"></script>
   <script>
     // Weiterleitung wenn bereits eingeloggt
