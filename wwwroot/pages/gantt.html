@@ -88,6 +88,7 @@
   <div class="detail-body">
     <div class="detail-tabs">
       <button class="detail-tab active" onclick="switchTab('info')">Info</button>
+      <button class="detail-tab" onclick="switchTab('assignments')">Zuweisungen</button>
       <button class="detail-tab" onclick="switchTab('edit')">Bearbeiten</button>
       <button class="detail-tab" onclick="switchTab('comments')">Kommentare</button>
     </div>
@@ -95,6 +96,22 @@
       <div id="dp-status" class="badge"></div>
       <p><strong>Zeitraum:</strong> <span id="dp-dates"></span></p>
       <p><strong>Zuständig:</strong> <span id="dp-assignee"></span></p>
+    </div>
+    <div id="tab-assignments" class="detail-pane">
+      <div id="assignments-list" style="margin-bottom: 1rem;">
+        <div style="color: var(--gray-600); font-style: italic;">Keine Zuweisungen</div>
+      </div>
+      <div style="border-top: 1px solid var(--gray-200); padding-top: 1rem;">
+        <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">Neue Zuweisung</h4>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <select id="assign-user" style="flex: 2; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px;">
+            <option value="">Mitarbeiter wählen...</option>
+          </select>
+          <input id="assign-percentage" type="number" min="1" max="100" placeholder="%" style="width: 80px; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px;">
+          <button class="btn btn-sm btn-primary" onclick="addAssignment()" style="white-space: nowrap;">➕ Hinzufügen</button>
+        </div>
+        <div id="msg-assignment" style="font-size: 0.85rem; min-height: 1.2em; color: var(--danger);"></div>
+      </div>
     </div>
     <div id="tab-edit" class="detail-pane">
       <input type="hidden" id="et-id">
@@ -222,11 +239,194 @@
     openModal('modal-add-task');
   }
 
-  function closeDetailPanel() { document.getElementById('detail-panel').classList.remove('open'); }
-  function switchTab(t) { /* Logik zum Umschalten der Tabs */ }
+  let currentTaskId = null;
+  let projectMembers = [];
+
+  function closeDetailPanel() { 
+    document.getElementById('detail-panel').classList.remove('open'); 
+    currentTaskId = null;
+  }
+  
+  function switchTab(tabName) {
+    // Alle Tabs deaktivieren
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.detail-pane').forEach(p => p.classList.remove('active'));
+    
+    // Aktiven Tab aktivieren
+    document.querySelector(`.detail-tab[onclick*="${tabName}"]`)?.classList.add('active');
+    document.getElementById(`tab-${tabName}`)?.classList.add('active');
+    
+    // Wenn Assignments Tab, lade Zuweisungen
+    if (tabName === 'assignments' && currentTaskId) {
+      loadAssignments(currentTaskId);
+    }
+  }
+
+  // Lade Projektmitglieder beim Start
+  async function loadProjectMembers() {
+    try {
+      const res = await apiFetch(`/project/${projectId}`);
+      if (res.ok) {
+        const project = await res.json();
+        const allRes = await apiFetch('/auth/getAll');
+        const allUsers = await allRes.json();
+        
+        // Owner + Members
+        projectMembers = allUsers.filter(u => 
+          u.id === project.ownerId || 
+          project.members?.some(m => m.userId === u.id)
+        );
+        
+        // Populate select dropdowns
+        populateMemberSelects();
+      }
+    } catch (err) {
+      console.error('Failed to load project members:', err);
+    }
+  }
+
+  function populateMemberSelects() {
+    const selectHTML = projectMembers.map(m => 
+      `<option value="${m.id}">${m.fullName}${m.shortName ? ' (' + m.shortName + ')' : ''}</option>`
+    ).join('');
+    
+    document.getElementById('assign-user').innerHTML = 
+      '<option value="">Mitarbeiter wählen...</option>' + selectHTML;
+  }
+
+  // Task Info anzeigen und Assignments laden
+  gantt.attachEvent("onTaskClick", function(id){
+    const task = gantt.getTask(id);
+    currentTaskId = task.id;
+    
+    document.getElementById('dp-title').textContent = task.text;
+    document.getElementById('dp-dates').textContent = 
+      `${gantt.date.date_to_str('%d.%m.%Y')(task.start_date)} - ${gantt.date.date_to_str('%d.%m.%Y')(task.end_date)}`;
+    
+    // Zeige Assignments im Info Tab
+    if (task.assignments && task.assignments.length > 0) {
+      const assigneeText = task.assignments
+        .map(a => `${a.userName}${a.shortName ? ' (' + a.shortName + ')' : ''} [${a.percentage}%]`)
+        .join(', ');
+      document.getElementById('dp-assignee').textContent = assigneeText;
+    } else if (task.assigneeName) {
+      document.getElementById('dp-assignee').textContent = task.assigneeName;
+    } else {
+      document.getElementById('dp-assignee').textContent = 'Nicht zugewiesen';
+    }
+    
+    document.getElementById('detail-panel').classList.add('open');
+    return true;
+  });
+
+  // Assignments laden und anzeigen
+  async function loadAssignments(taskId) {
+    try {
+      const res = await apiFetch(`/tasks/${taskId}/assignments`);
+      if (res.ok) {
+        const assignments = await res.json();
+        renderAssignments(assignments);
+      }
+    } catch (err) {
+      console.error('Failed to load assignments:', err);
+    }
+  }
+
+  function renderAssignments(assignments) {
+    const container = document.getElementById('assignments-list');
+    
+    if (assignments.length === 0) {
+      container.innerHTML = '<div style="color: var(--gray-600); font-style: italic;">Keine Zuweisungen</div>';
+      return;
+    }
+    
+    const totalPercentage = assignments.reduce((sum, a) => sum + a.percentage, 0);
+    const isValid = totalPercentage <= 100;
+    
+    container.innerHTML = `
+      <div style="margin-bottom: 0.75rem;">
+        <div style="font-size: 0.85rem; color: var(--gray-600); margin-bottom: 0.25rem;">
+          Gesamtauslastung: <strong style="color: ${isValid ? 'var(--success)' : 'var(--danger)'};">${totalPercentage}%</strong>
+          ${!isValid ? '<span style="color: var(--danger);">⚠️ Über 100%!</span>' : ''}
+        </div>
+        <div style="background: var(--gray-200); height: 8px; border-radius: 4px; overflow: hidden;">
+          <div style="background: ${isValid ? 'var(--success)' : 'var(--danger)'}; height: 100%; width: ${Math.min(totalPercentage, 100)}%; transition: width 0.3s;"></div>
+        </div>
+      </div>
+      ${assignments.map(a => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--gray-50); border-radius: 4px; margin-bottom: 0.5rem;">
+          <div style="flex: 1;">
+            <strong>${a.userName}</strong>
+            ${a.userShortName ? `<code style="margin-left: 0.5rem; background: var(--gray-200); padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">${a.userShortName}</code>` : ''}
+            <div style="font-size: 0.85rem; color: var(--gray-600); margin-top: 0.25rem;">
+              <strong>${a.percentage}%</strong> Arbeitsanteil
+            </div>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="removeAssignment(${a.id})" style="font-size: 0.85rem;">🗑️</button>
+        </div>
+      `).join('')}
+    `;
+  }
+
+  // Neue Zuweisung hinzufügen
+  async function addAssignment() {
+    const userId = document.getElementById('assign-user').value;
+    const percentage = parseFloat(document.getElementById('assign-percentage').value);
+    const msgEl = document.getElementById('msg-assignment');
+    
+    if (!userId || !percentage) {
+      msgEl.textContent = 'Bitte Mitarbeiter und Prozentsatz angeben.';
+      return;
+    }
+    
+    if (percentage < 1 || percentage > 100) {
+      msgEl.textContent = 'Prozentsatz muss zwischen 1 und 100 liegen.';
+      return;
+    }
+    
+    try {
+      const res = await apiFetch(`/tasks/${currentTaskId}/assignments`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, percentage })
+      });
+      
+      if (res.ok) {
+        msgEl.textContent = '';
+        document.getElementById('assign-user').value = '';
+        document.getElementById('assign-percentage').value = '';
+        loadAssignments(currentTaskId);
+        loadGantt(); // Refresh Gantt um neue Assignments zu zeigen
+      } else {
+        const data = await res.json();
+        msgEl.textContent = data.error || 'Fehler beim Hinzufügen';
+      }
+    } catch (err) {
+      msgEl.textContent = 'Server nicht erreichbar';
+    }
+  }
+
+  // Zuweisung entfernen
+  async function removeAssignment(assignmentId) {
+    if (!confirm('Zuweisung wirklich entfernen?')) return;
+    
+    try {
+      const res = await apiFetch(`/tasks/${currentTaskId}/assignments/${assignmentId}`, {
+        method: 'DELETE'
+      });
+      
+      if (res.ok) {
+        loadAssignments(currentTaskId);
+        loadGantt();
+      }
+    } catch (err) {
+      alert('Fehler beim Entfernen der Zuweisung');
+    }
+  }
+  
   function logout() { clearToken(); window.location.href = '/index.html'; }
 
   // Start
+  loadProjectMembers();
   loadGantt();
 </script>
 </body>

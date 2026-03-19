@@ -180,11 +180,17 @@ namespace ProjectPlanner.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("NVARCHAR2(100)");
 
+                    b.Property<decimal>("HourlyRate")
+                        .HasColumnType("NUMBER(10,2)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("NUMBER(1)");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("TIMESTAMP(7) WITH TIME ZONE");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("NUMBER(1)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -203,6 +209,9 @@ namespace ProjectPlanner.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("NUMBER(1)");
 
+                    b.Property<bool>("PrivacyAccepted")
+                        .HasColumnType("NUMBER(1)");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -210,6 +219,11 @@ namespace ProjectPlanner.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("NVARCHAR2(2000)");
+
+                    b.Property<string>("ShortName")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("NVARCHAR2(10)");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("NUMBER(1)");
@@ -229,6 +243,40 @@ namespace ProjectPlanner.Migrations
                         .HasFilter("\"NormalizedUserName\" IS NOT NULL");
 
                     b.ToTable("ASPNETUSERS", "ADMIN");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.PrivacyConsent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("NUMBER(10)");
+
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Accepted")
+                        .HasColumnType("NUMBER(1)");
+
+                    b.Property<DateTime>("AcceptedAt")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("NVARCHAR2(45)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("NVARCHAR2(450)");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("NVARCHAR2(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PRIVACY_CONSENTS", "ADMIN");
                 });
 
             modelBuilder.Entity("ProjectPlanner.Models.Project", b =>
@@ -279,6 +327,9 @@ namespace ProjectPlanner.Migrations
                     b.Property<string>("UserId")
                         .HasColumnType("NVARCHAR2(450)");
 
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("TIMESTAMP(7)");
+
                     b.HasKey("ProjectId", "UserId");
 
                     b.HasIndex("UserId");
@@ -293,6 +344,9 @@ namespace ProjectPlanner.Migrations
                         .HasColumnType("NUMBER(10)");
 
                     OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("ActualDuration")
+                        .HasColumnType("NUMBER(10,2)");
 
                     b.Property<string>("AssigneeId")
                         .HasColumnType("NVARCHAR2(450)");
@@ -309,6 +363,9 @@ namespace ProjectPlanner.Migrations
 
                     b.Property<int?>("ParentId")
                         .HasColumnType("NUMBER(10)");
+
+                    b.Property<decimal?>("PlannedDuration")
+                        .HasColumnType("NUMBER(10,2)");
 
                     b.Property<string>("Priority")
                         .IsRequired()
@@ -334,6 +391,9 @@ namespace ProjectPlanner.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("NVARCHAR2(200)");
 
+                    b.Property<decimal>("WorkSharePercent")
+                        .HasColumnType("NUMBER(5,2)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AssigneeId");
@@ -341,6 +401,36 @@ namespace ProjectPlanner.Migrations
                     b.HasIndex("ProjectId");
 
                     b.ToTable("TASKS", "ADMIN");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.TaskAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("NUMBER(10)");
+
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<decimal>("Percentage")
+                        .HasColumnType("NUMBER(5,2)");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("NVARCHAR2(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TASK_ASSIGNMENTS", "ADMIN");
                 });
 
             modelBuilder.Entity("ProjectPlanner.Models.TaskComment", b =>
@@ -411,6 +501,96 @@ namespace ProjectPlanner.Migrations
                     b.ToTable("TASK_LINKS", "ADMIN");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Models.TimeEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("NUMBER(10)");
+
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("NVARCHAR2(500)");
+
+                    b.Property<decimal?>("DurationHours")
+                        .HasColumnType("NUMBER(8,2)");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<bool>("IsManual")
+                        .HasColumnType("NUMBER(1)");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("NVARCHAR2(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("TaskId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TIME_ENTRIES", "ADMIN");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.WorkSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("NUMBER(10)");
+
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DailyEndTime")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("NVARCHAR2(5)");
+
+                    b.Property<decimal>("DailyHours")
+                        .HasColumnType("NUMBER(4,2)");
+
+                    b.Property<string>("DailyStartTime")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("NVARCHAR2(5)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("NUMBER(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("NVARCHAR2(100)");
+
+                    b.Property<int?>("ProjectId")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<int>("WorkDaysMask")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("WORK_SCHEDULES", "ADMIN");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -462,6 +642,17 @@ namespace ProjectPlanner.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Models.PrivacyConsent", b =>
+                {
+                    b.HasOne("ProjectPlanner.Models.AppUser", "User")
+                        .WithMany("PrivacyConsents")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Models.Project", b =>
                 {
                     b.HasOne("ProjectPlanner.Models.AppUser", "Owner")
@@ -510,6 +701,25 @@ namespace ProjectPlanner.Migrations
                     b.Navigation("Project");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Models.TaskAssignment", b =>
+                {
+                    b.HasOne("ProjectPlanner.Models.ProjectTask", "Task")
+                        .WithMany("TaskAssignments")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Task");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Models.TaskComment", b =>
                 {
                     b.HasOne("ProjectPlanner.Models.ProjectTask", "Task")
@@ -556,9 +766,50 @@ namespace ProjectPlanner.Migrations
                     b.Navigation("TargetTask");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Models.TimeEntry", b =>
+                {
+                    b.HasOne("ProjectPlanner.Models.Project", "Project")
+                        .WithMany("TimeEntries")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Models.ProjectTask", "Task")
+                        .WithMany("TimeEntries")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Models.AppUser", "User")
+                        .WithMany("TimeEntries")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("Task");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Models.WorkSchedule", b =>
+                {
+                    b.HasOne("ProjectPlanner.Models.Project", "Project")
+                        .WithMany("WorkSchedules")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Project");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Models.AppUser", b =>
                 {
+                    b.Navigation("PrivacyConsents");
+
                     b.Navigation("Projects");
+
+                    b.Navigation("TimeEntries");
                 });
 
             modelBuilder.Entity("ProjectPlanner.Models.Project", b =>
@@ -568,6 +819,10 @@ namespace ProjectPlanner.Migrations
                     b.Navigation("Members");
 
                     b.Navigation("Tasks");
+
+                    b.Navigation("TimeEntries");
+
+                    b.Navigation("WorkSchedules");
                 });
 
             modelBuilder.Entity("ProjectPlanner.Models.ProjectTask", b =>
@@ -577,6 +832,10 @@ namespace ProjectPlanner.Migrations
                     b.Navigation("LinksFrom");
 
                     b.Navigation("LinksTo");
+
+                    b.Navigation("TaskAssignments");
+
+                    b.Navigation("TimeEntries");
                 });
 #pragma warning restore 612, 618
         }

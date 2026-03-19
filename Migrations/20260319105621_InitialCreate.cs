@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ProjectPlanner.Migrations
 {
     /// <inheritdoc />
-    public partial class testen : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -36,7 +36,11 @@ namespace ProjectPlanner.Migrations
                 {
                     Id = table.Column<string>(type: "NVARCHAR2(450)", nullable: false),
                     FullName = table.Column<string>(type: "NVARCHAR2(100)", maxLength: 100, nullable: false),
+                    ShortName = table.Column<string>(type: "NVARCHAR2(10)", maxLength: 10, nullable: false),
+                    HourlyRate = table.Column<decimal>(type: "NUMBER(10,2)", nullable: false),
                     Role = table.Column<string>(type: "NVARCHAR2(20)", maxLength: 20, nullable: false),
+                    MustChangePassword = table.Column<bool>(type: "NUMBER(1)", nullable: false),
+                    PrivacyAccepted = table.Column<bool>(type: "NUMBER(1)", nullable: false),
                     UserName = table.Column<string>(type: "NVARCHAR2(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "NVARCHAR2(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "NVARCHAR2(256)", maxLength: 256, nullable: true),
@@ -175,6 +179,31 @@ namespace ProjectPlanner.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PRIVACY_CONSENTS",
+                schema: "ADMIN",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "NUMBER(10)", nullable: false)
+                        .Annotation("Oracle:Identity", "START WITH 1 INCREMENT BY 1"),
+                    UserId = table.Column<string>(type: "NVARCHAR2(450)", nullable: false),
+                    AcceptedAt = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false),
+                    IpAddress = table.Column<string>(type: "NVARCHAR2(45)", maxLength: 45, nullable: true),
+                    Version = table.Column<string>(type: "NVARCHAR2(20)", maxLength: 20, nullable: false),
+                    Accepted = table.Column<bool>(type: "NUMBER(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PRIVACY_CONSENTS", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PRIVACY_CONSENTS_ASPNETUSERS_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "ADMIN",
+                        principalTable: "ASPNETUSERS",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PROJECTS",
                 schema: "ADMIN",
                 columns: table => new
@@ -206,7 +235,8 @@ namespace ProjectPlanner.Migrations
                 columns: table => new
                 {
                     ProjectId = table.Column<int>(type: "NUMBER(10)", nullable: false),
-                    UserId = table.Column<string>(type: "NVARCHAR2(450)", nullable: false)
+                    UserId = table.Column<string>(type: "NVARCHAR2(450)", nullable: false),
+                    JoinedAt = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -237,6 +267,9 @@ namespace ProjectPlanner.Migrations
                     Title = table.Column<string>(type: "NVARCHAR2(200)", maxLength: 200, nullable: false),
                     StartDate = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false),
                     EndDate = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false),
+                    PlannedDuration = table.Column<decimal>(type: "NUMBER(10,2)", nullable: true),
+                    ActualDuration = table.Column<decimal>(type: "NUMBER(10,2)", nullable: false),
+                    WorkSharePercent = table.Column<decimal>(type: "NUMBER(5,2)", nullable: false),
                     Progress = table.Column<int>(type: "NUMBER(10)", nullable: false),
                     ParentId = table.Column<int>(type: "NUMBER(10)", nullable: true),
                     Priority = table.Column<string>(type: "NVARCHAR2(10)", maxLength: 10, nullable: false),
@@ -261,6 +294,64 @@ namespace ProjectPlanner.Migrations
                         column: x => x.ProjectId,
                         principalSchema: "ADMIN",
                         principalTable: "PROJECTS",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "WORK_SCHEDULES",
+                schema: "ADMIN",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "NUMBER(10)", nullable: false)
+                        .Annotation("Oracle:Identity", "START WITH 1 INCREMENT BY 1"),
+                    Name = table.Column<string>(type: "NVARCHAR2(100)", maxLength: 100, nullable: false),
+                    ProjectId = table.Column<int>(type: "NUMBER(10)", nullable: true),
+                    WorkDaysMask = table.Column<int>(type: "NUMBER(10)", nullable: false),
+                    DailyStartTime = table.Column<string>(type: "NVARCHAR2(5)", maxLength: 5, nullable: false),
+                    DailyEndTime = table.Column<string>(type: "NVARCHAR2(5)", maxLength: 5, nullable: false),
+                    DailyHours = table.Column<decimal>(type: "NUMBER(4,2)", nullable: false),
+                    IsDefault = table.Column<bool>(type: "NUMBER(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_WORK_SCHEDULES", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_WORK_SCHEDULES_PROJECTS_ProjectId",
+                        column: x => x.ProjectId,
+                        principalSchema: "ADMIN",
+                        principalTable: "PROJECTS",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TASK_ASSIGNMENTS",
+                schema: "ADMIN",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "NUMBER(10)", nullable: false)
+                        .Annotation("Oracle:Identity", "START WITH 1 INCREMENT BY 1"),
+                    TaskId = table.Column<int>(type: "NUMBER(10)", nullable: false),
+                    UserId = table.Column<string>(type: "NVARCHAR2(450)", nullable: false),
+                    Percentage = table.Column<decimal>(type: "NUMBER(5,2)", nullable: false),
+                    AssignedAt = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TASK_ASSIGNMENTS", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TASK_ASSIGNMENTS_ASPNETUSERS_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "ADMIN",
+                        principalTable: "ASPNETUSERS",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TASK_ASSIGNMENTS_TASKS_TaskId",
+                        column: x => x.TaskId,
+                        principalSchema: "ADMIN",
+                        principalTable: "TASKS",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -333,6 +424,48 @@ namespace ProjectPlanner.Migrations
                         principalColumn: "Id");
                 });
 
+            migrationBuilder.CreateTable(
+                name: "TIME_ENTRIES",
+                schema: "ADMIN",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "NUMBER(10)", nullable: false)
+                        .Annotation("Oracle:Identity", "START WITH 1 INCREMENT BY 1"),
+                    UserId = table.Column<string>(type: "NVARCHAR2(450)", nullable: false),
+                    TaskId = table.Column<int>(type: "NUMBER(10)", nullable: false),
+                    ProjectId = table.Column<int>(type: "NUMBER(10)", nullable: false),
+                    StartTime = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false),
+                    EndTime = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: true),
+                    DurationHours = table.Column<decimal>(type: "NUMBER(8,2)", nullable: true),
+                    Description = table.Column<string>(type: "NVARCHAR2(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false),
+                    IsManual = table.Column<bool>(type: "NUMBER(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TIME_ENTRIES", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TIME_ENTRIES_ASPNETUSERS_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "ADMIN",
+                        principalTable: "ASPNETUSERS",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TIME_ENTRIES_PROJECTS_ProjectId",
+                        column: x => x.ProjectId,
+                        principalSchema: "ADMIN",
+                        principalTable: "PROJECTS",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_TIME_ENTRIES_TASKS_TaskId",
+                        column: x => x.TaskId,
+                        principalSchema: "ADMIN",
+                        principalTable: "TASKS",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_ASPNETROLECLAIMS_RoleId",
                 schema: "ADMIN",
@@ -380,6 +513,12 @@ namespace ProjectPlanner.Migrations
                 filter: "\"NormalizedUserName\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PRIVACY_CONSENTS_UserId",
+                schema: "ADMIN",
+                table: "PRIVACY_CONSENTS",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PROJECT_MEMBERS_UserId",
                 schema: "ADMIN",
                 table: "PROJECT_MEMBERS",
@@ -390,6 +529,18 @@ namespace ProjectPlanner.Migrations
                 schema: "ADMIN",
                 table: "PROJECTS",
                 column: "OwnerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TASK_ASSIGNMENTS_TaskId",
+                schema: "ADMIN",
+                table: "TASK_ASSIGNMENTS",
+                column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TASK_ASSIGNMENTS_UserId",
+                schema: "ADMIN",
+                table: "TASK_ASSIGNMENTS",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TASK_COMMENTS_TaskId",
@@ -432,6 +583,30 @@ namespace ProjectPlanner.Migrations
                 schema: "ADMIN",
                 table: "TASKS",
                 column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TIME_ENTRIES_ProjectId",
+                schema: "ADMIN",
+                table: "TIME_ENTRIES",
+                column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TIME_ENTRIES_TaskId",
+                schema: "ADMIN",
+                table: "TIME_ENTRIES",
+                column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TIME_ENTRIES_UserId",
+                schema: "ADMIN",
+                table: "TIME_ENTRIES",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_WORK_SCHEDULES_ProjectId",
+                schema: "ADMIN",
+                table: "WORK_SCHEDULES",
+                column: "ProjectId");
         }
 
         /// <inheritdoc />
@@ -458,7 +633,15 @@ namespace ProjectPlanner.Migrations
                 schema: "ADMIN");
 
             migrationBuilder.DropTable(
+                name: "PRIVACY_CONSENTS",
+                schema: "ADMIN");
+
+            migrationBuilder.DropTable(
                 name: "PROJECT_MEMBERS",
+                schema: "ADMIN");
+
+            migrationBuilder.DropTable(
+                name: "TASK_ASSIGNMENTS",
                 schema: "ADMIN");
 
             migrationBuilder.DropTable(
@@ -467,6 +650,14 @@ namespace ProjectPlanner.Migrations
 
             migrationBuilder.DropTable(
                 name: "TASK_LINKS",
+                schema: "ADMIN");
+
+            migrationBuilder.DropTable(
+                name: "TIME_ENTRIES",
+                schema: "ADMIN");
+
+            migrationBuilder.DropTable(
+                name: "WORK_SCHEDULES",
                 schema: "ADMIN");
 
             migrationBuilder.DropTable(

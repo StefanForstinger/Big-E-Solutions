@@ -32,14 +32,22 @@
         <h3>Neuen Benutzer anlegen</h3>
       </div>
       <div class="card-body">
-        <form id="create-user-form" onsubmit="event.preventDefault(); createUser();" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+        <form id="create-user-form" onsubmit="event.preventDefault(); createUser();" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
           <div class="form-group">
             <label for="user-name">Vollständiger Name *</label>
             <input id="user-name" type="text" placeholder="Max Mustermann" required>
           </div>
           <div class="form-group">
+            <label for="user-shortname">Kürzel</label>
+            <input id="user-shortname" type="text" placeholder="MUS" maxlength="10" style="text-transform: uppercase;">
+          </div>
+          <div class="form-group">
             <label for="user-email">Schul-E-Mail *</label>
             <input id="user-email" type="email" placeholder="max.mustermann@schule.at" required>
+          </div>
+          <div class="form-group">
+            <label for="user-hourlyrate">Stundensatz (€)</label>
+            <input id="user-hourlyrate" type="number" step="0.01" min="0" placeholder="45.50">
           </div>
           <div class="form-group">
             <label for="user-role">Rolle *</label>
@@ -86,7 +94,9 @@
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>Kürzel</th>
                   <th>E-Mail</th>
+                  <th>Stundensatz</th>
                   <th>Rolle</th>
                   <th>Aktionen</th>
                 </tr>
@@ -253,11 +263,14 @@
 
     async function createUser() {
       const name = document.getElementById('user-name').value.trim();
+      const shortName = document.getElementById('user-shortname').value.trim().toUpperCase();
       const email = document.getElementById('user-email').value.trim();
+      const hourlyRateInput = document.getElementById('user-hourlyrate').value.trim();
+      const hourlyRate = hourlyRateInput ? parseFloat(hourlyRateInput) : null;
       const role = document.getElementById('user-role').value;
 
       if (!name || !email || !role) {
-        showAlert('msg-create', 'Bitte alle Felder ausfüllen.', 'error');
+        showAlert('msg-create', 'Bitte alle Pflichtfelder ausfüllen.', 'error');
         return;
       }
 
@@ -266,17 +279,22 @@
       document.getElementById('created-user-info').style.display = 'none';
 
       try {
+        const body = {
+          email: email,
+          fullName: name,
+          role: role
+        };
+        
+        if (shortName) body.shortName = shortName;
+        if (hourlyRate !== null) body.hourlyRate = hourlyRate;
+
         const res = await fetch('/api/auth/create-user', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + getToken()
           },
-          body: JSON.stringify({
-            email: email,
-            fullName: name,
-            role: role
-          })
+          body: JSON.stringify(body)
         });
 
         const data = await res.json();
@@ -339,10 +357,15 @@
       tbody.innerHTML = users.map(user => {
         const badgeClass = user.role === 'Admin' ? 'badge-admin' : 
                           user.role === 'Teacher' ? 'badge-teacher' : 'badge-student';
+        const shortName = user.shortName || '-';
+        const hourlyRate = user.hourlyRate ? `€${user.hourlyRate.toFixed(2)}` : '-';
+        
         return `
           <tr>
             <td><strong>${escapeHtml(user.fullName)}</strong></td>
+            <td><code style="background: var(--gray-100); padding: 2px 6px; border-radius: 3px; font-weight: bold;">${escapeHtml(shortName)}</code></td>
             <td>${escapeHtml(user.email)}</td>
+            <td>${hourlyRate}</td>
             <td><span class="badge ${badgeClass}">${escapeHtml(user.role)}</span></td>
             <td>
               <button class="btn btn-sm btn-outline" onclick="openRoleModal('${user.id}', '${escapeHtml(user.fullName)}', '${user.role}')">
