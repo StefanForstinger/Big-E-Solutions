@@ -28,6 +28,8 @@ public class TaskController : ControllerBase
     {
         var tasks = await _db.Tasks
             .Include(t => t.Assignee)
+            .Include(t => t.TaskAssignments)
+            .ThenInclude(ta => ta.User)
             .Where(t => t.ProjectId == projectId)
             .Select(t => new
             {
@@ -41,8 +43,16 @@ public class TaskController : ControllerBase
                 status          = t.Status,
                 type            = t.IsMilestone ? "milestone" : "task",
                 note            = t.Note,
+                // Legacy support
                 assigneeId      = t.AssigneeId,
                 assigneeName    = t.Assignee != null ? t.Assignee.FullName : null,
+                // Neue Mehrfachzuweisung
+                assignments     = t.TaskAssignments.Select(ta => new {
+                    userId = ta.UserId,
+                    userName = ta.User.FullName,
+                    shortName = ta.User.ShortName,
+                    percentage = ta.Percentage
+                }).ToList(),
                 plannedDuration = t.PlannedDuration,
                 actualDuration  = t.ActualDuration,
                 workSharePercent = t.WorkSharePercent,

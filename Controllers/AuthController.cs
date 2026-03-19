@@ -114,7 +114,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var users = await _userManager.Users
-            .Select(u => new { u.Id, u.FullName, u.Email, u.Role })
+            .Select(u => new { u.Id, u.FullName, u.ShortName, u.HourlyRate, u.Email, u.Role })
             .ToListAsync();
         return Ok(users);
     }
@@ -155,6 +155,8 @@ public class AuthController : ControllerBase
             UserName           = dto.Email,
             Email              = dto.Email,
             FullName           = dto.FullName,
+            ShortName          = dto.ShortName ?? "",
+            HourlyRate         = dto.HourlyRate ?? 0,
             Role               = dto.Role,
             MustChangePassword = true,
             PrivacyAccepted    = false
@@ -186,4 +188,4 @@ public class AuthController : ControllerBase
 public record LoginDto(string Email, string Password);
 public record SetRoleDto(string UserId, string Role);
 public record ChangePasswordDto(string CurrentPassword, string NewPassword);
-public record CreateUserDto(string Email, string FullName, string Role);
+public record CreateUserDto(string Email, string FullName, string Role, string? ShortName = null, decimal? HourlyRate = null);

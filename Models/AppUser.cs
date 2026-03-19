@@ -7,6 +7,12 @@ public class AppUser : IdentityUser
 {
     public string FullName { get; set; } = string.Empty;
 
+    /// <summary>Kürzel des Mitarbeiters (z.B. "MAY" für Mayr)</summary>
+    public string ShortName { get; set; } = string.Empty;
+
+    /// <summary>Stundensatz in Euro</summary>
+    public decimal HourlyRate { get; set; } = 0;
+
     /// <summary>Student | Teacher | Admin</summary>
     public string Role { get; set; } = "Student";
 

@@ -13,6 +13,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<ProjectMember>  ProjectMembers  => Set<ProjectMember>();
     public DbSet<TaskLink>       TaskLinks       => Set<TaskLink>();
     public DbSet<TaskComment>    TaskComments    => Set<TaskComment>();
+    public DbSet<TaskAssignment> TaskAssignments => Set<TaskAssignment>();
     public DbSet<PrivacyConsent> PrivacyConsents => Set<PrivacyConsent>();
     public DbSet<WorkSchedule>   WorkSchedules   => Set<WorkSchedule>();
     public DbSet<TimeEntry>      TimeEntries     => Set<TimeEntry>();
@@ -35,12 +36,15 @@ public class AppDbContext : IdentityDbContext<AppUser>
         builder.Entity<ProjectMember>().ToTable("PROJECT_MEMBERS");
         builder.Entity<TaskLink>().ToTable("TASK_LINKS");
         builder.Entity<TaskComment>().ToTable("TASK_COMMENTS");
+        builder.Entity<TaskAssignment>().ToTable("TASK_ASSIGNMENTS");
         builder.Entity<PrivacyConsent>().ToTable("PRIVACY_CONSENTS");
         builder.Entity<WorkSchedule>().ToTable("WORK_SCHEDULES");
         builder.Entity<TimeEntry>().ToTable("TIME_ENTRIES");
 
         // ── AppUser: neue Felder ─────────────────────────────────────────────
         builder.Entity<AppUser>().Property(u => u.FullName).HasMaxLength(100);
+        builder.Entity<AppUser>().Property(u => u.ShortName).HasMaxLength(10);
+        builder.Entity<AppUser>().Property(u => u.HourlyRate).HasColumnType("NUMBER(10,2)");
         builder.Entity<AppUser>().Property(u => u.Role).HasMaxLength(20);
 
         // ── Projekt-Beziehungen ──────────────────────────────────────────────
@@ -90,6 +94,15 @@ public class AppDbContext : IdentityDbContext<AppUser>
         builder.Entity<TaskComment>()
             .HasOne(c => c.User).WithMany()
             .HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        // ── TaskAssignment ───────────────────────────────────────────────────
+        builder.Entity<TaskAssignment>()
+            .HasOne(ta => ta.Task).WithMany(t => t.TaskAssignments)
+            .HasForeignKey(ta => ta.TaskId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<TaskAssignment>()
+            .HasOne(ta => ta.User).WithMany()
+            .HasForeignKey(ta => ta.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<TaskAssignment>().Property(ta => ta.Percentage).HasColumnType("NUMBER(5,2)");
 
         // ── PrivacyConsent ───────────────────────────────────────────────────
         builder.Entity<PrivacyConsent>()
