@@ -16,12 +16,6 @@
       <p>Berufsschule – BS2</p>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('login')">Anmelden</button>
-      <button class="tab-btn"        onclick="showTab('register')">Registrieren</button>
-    </div>
-
     <!-- Login -->
     <div id="tab-login">
       <form id="login-form" onsubmit="event.preventDefault(); login();">
@@ -38,42 +32,6 @@
         </button>
       </form>
       <div id="msg-login" class="alert alert-hidden"></div>
-    </div>
-
-    <!-- Register -->
-    <div id="tab-register" class="d-none">
-      <form id="register-form" onsubmit="event.preventDefault(); register();">
-        <div class="form-group">
-          <label for="r-name">Vollständiger Name</label>
-          <input id="r-name" name="name" type="text" placeholder="Max Mustermann" autocomplete="name" required>
-        </div>
-        <div class="form-group">
-          <label for="r-email">E-Mail</label>
-          <input id="r-email" name="email" type="email" placeholder="name@schule.at" autocomplete="username" required>
-        </div>
-        <div class="form-group">
-          <label for="r-pass">Passwort <span class="text-muted">(min. 6 Zeichen, 1 Zahl)</span></label>
-          <input id="r-pass" name="password" type="password" placeholder="Passwort wählen" autocomplete="new-password" required>
-        </div>
-        <!-- FIX: Datenschutz-Checkbox – Button bleibt deaktiviert bis akzeptiert -->
-        <div class="form-group" style="display:flex;align-items:flex-start;gap:.6rem;margin-top:.25rem">
-          <input id="r-privacy" type="checkbox" style="margin-top:3px;width:16px;height:16px;flex-shrink:0"
-                 onchange="toggleRegisterButton()">
-          <label for="r-privacy" style="font-size:.85rem;color:var(--gray-700);cursor:pointer">
-            Ich akzeptiere die <a href="#" onclick="alert('Datenschutzbestimmungen:\n\nDeine Daten werden ausschließlich für den Schulbetrieb verwendet und nicht an Dritte weitergegeben.');return false;" style="color:var(--accent)">Datenschutzbestimmungen</a>
-          </label>
-        </div>
-        <div id="msg-privacy" class="alert alert-hidden" style="margin-top:0.5rem"></div>
-        <div style="position: relative;">
-          <button id="btn-register" type="submit" class="btn btn-success btn-full btn-lg" disabled>
-            Konto erstellen
-          </button>
-          <!-- Unsichtbare Overlay um Klicks abzufangen wenn Button disabled ist -->
-          <div id="register-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; cursor: not-allowed; display: block;" 
-               onclick="checkPrivacyBeforeRegister()"></div>
-        </div>
-      </form>
-      <div id="msg-register" class="alert alert-hidden"></div>
     </div>
   </div>
 
@@ -116,33 +74,6 @@
     // Weiterleitung wenn bereits eingeloggt
     if (isLoggedIn()) window.location.href = '/pages/dashboard.html';
 
-    function showTab(tab) {
-      document.getElementById('tab-login').classList.toggle('d-none',    tab !== 'login');
-      document.getElementById('tab-register').classList.toggle('d-none', tab !== 'register');
-      document.querySelectorAll('.tab-btn').forEach((b, i) =>
-        b.classList.toggle('active', (i === 0) === (tab === 'login')));
-      hideAlert('msg-login');
-      hideAlert('msg-register');
-      hideAlert('msg-privacy');
-    }
-
-    function toggleRegisterButton() {
-      const privacyChecked = document.getElementById('r-privacy').checked;
-      const registerBtn = document.getElementById('btn-register');
-      const overlay = document.getElementById('register-overlay');
-      
-      registerBtn.disabled = !privacyChecked;
-      overlay.style.display = privacyChecked ? 'none' : 'block';
-      hideAlert('msg-privacy');
-    }
-
-    function checkPrivacyBeforeRegister() {
-      const privacy = document.getElementById('r-privacy').checked;
-      if (!privacy) {
-        showAlert('msg-privacy', 'Bitte akzeptiere die Datenschutzbestimmungen, um fortzufahren.', 'error');
-      }
-    }
-
     async function login() {
       const email = document.getElementById('l-email').value.trim();
       const pass  = document.getElementById('l-pass').value;
@@ -173,56 +104,6 @@
         setLoading('btn-login', false);
       }
     }
-
-    async function register() {
-      const name    = document.getElementById('r-name').value.trim();
-      const email   = document.getElementById('r-email').value.trim();
-      const pass    = document.getElementById('r-pass').value;
-      const privacy = document.getElementById('r-privacy').checked;
-
-      if (!name || !email || !pass) { showAlert('msg-register', 'Bitte alle Felder ausfüllen.'); return; }
-      
-      // Datenschutz-Validierung mit sichtbarer Fehlermeldung
-      if (!privacy) { 
-        showAlert('msg-privacy', 'Bitte akzeptiere die Datenschutzbestimmungen, um fortzufahren.', 'error'); 
-        return; 
-      }
-
-      setLoading('btn-register', true);
-      try {
-        const res = await fetch('/api/auth/register', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // FIX: privacyAccepted wird jetzt mitgeschickt
-          body:    JSON.stringify({ email, password: pass, fullName: name, privacyAccepted: true })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setToken(data.token);
-          window.location.href = '/pages/dashboard.html';
-        } else {
-          const errMsg = data.error ?? (Array.isArray(data) ? data.map(e => e.description).join(' ') : 'Registrierung fehlgeschlagen.');
-          showAlert('msg-register', errMsg);
-        }
-      } catch {
-        showAlert('msg-register', 'Server nicht erreichbar.');
-      } finally {
-        setLoading('btn-register', false);
-      }
-    }
-
-    // Enter-Taste - funktioniert jetzt auch mit Forms
-    document.addEventListener('keydown', e => {
-      if (e.key !== 'Enter') return;
-      const registerVisible = !document.getElementById('tab-register').classList.contains('d-none');
-      if (registerVisible) {
-        const privacyChecked = document.getElementById('r-privacy').checked;
-        if (!privacyChecked) {
-          e.preventDefault();
-          showAlert('msg-privacy', 'Bitte akzeptiere die Datenschutzbestimmungen, um fortzufahren.', 'error');
-        }
-      }
-    });
   </script>
 </body>
 </html>

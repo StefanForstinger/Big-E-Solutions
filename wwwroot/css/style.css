@@ -407,3 +407,16 @@ textarea { resize: vertical; min-height: 80px; }
 .gap-1 { gap: .5rem; }
 .flex { display: flex; }
 .flex-center { display: flex; align-items: center; justify-content: center; }
+
+/* ── Role Badges ──────────────────────────────────────────────────────────── */
+.role-badge { 
+  display: inline-block; 
+  padding: 2px 10px; 
+  border-radius: 20px; 
+  font-size: .76em; 
+  font-weight: 700; 
+  letter-spacing: .02em; 
+}
+.role-admin   { background: #fee2e2; color: #b91c1c; }
+.role-teacher { background: #fef3c7; color: #92400e; }
+.role-student { background: #dbeafe; color: #1e40af; }

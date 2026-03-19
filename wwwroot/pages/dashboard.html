@@ -67,6 +67,9 @@
   <nav class="navbar">
     <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
     <div class="navbar-right">
+      <div id="admin-nav-link" style="display: none; margin-right: 1rem;">
+        <a href="/pages/user-management.html" class="btn btn-outline btn-sm">👥 Benutzer</a>
+      </div>
       <span class="navbar-user" id="nav-user"></span>
       <span class="role-badge" id="nav-role"></span>
       <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
@@ -194,6 +197,7 @@
     }
     if (currentRole === 'Admin') {
       document.getElementById('admin-panel').style.display = 'block';
+      document.getElementById('admin-nav-link').style.display = 'block';
       loadAdminPanel();
     }
     if (currentRole === 'Teacher' || currentRole === 'Admin') {

@@ -29,52 +29,6 @@ public class AuthController : ControllerBase
         _db          = db;
     }
 
-    // ── Registrieren ──────────────────────────────────────────────────────────
-    [HttpPost("register")]
-    public async Task<IActionResult> Register(RegisterDto dto)
-    {
-        if (!dto.PrivacyAccepted)
-            return BadRequest(new { error = "Datenschutzbestimmungen müssen akzeptiert werden." });
-
-        var users   = await _userManager.Users.ToListAsync();
-        var isFirst = users.Count == 0;
-
-        var user = new AppUser
-        {
-            UserName           = dto.Email,
-            Email              = dto.Email,
-            FullName           = dto.FullName,
-            Role               = isFirst ? "Admin" : "Student",
-            MustChangePassword = !isFirst,
-            PrivacyAccepted    = true
-        };
-
-        var result = await _userManager.CreateAsync(user, dto.Password);
-        if (!result.Succeeded)
-            return BadRequest(result.Errors);
-
-        var roleName = isFirst ? "Admin" : "Student";
-        await EnsureRoleExists(roleName);
-        await _userManager.AddToRoleAsync(user, roleName);
-
-        // Datenschutz-Zustimmung protokollieren
-        _db.PrivacyConsents.Add(new PrivacyConsent
-        {
-            UserId     = user.Id,
-            AcceptedAt = DateTime.UtcNow,
-            IpAddress  = HttpContext.Connection.RemoteIpAddress?.ToString(),
-            Version    = "1.0",
-            Accepted   = true
-        });
-        await _db.SaveChangesAsync();
-
-        return Ok(new
-        {
-            token              = _jwt.GenerateToken(user),
-            mustChangePassword = user.MustChangePassword
-        });
-    }
-
     // ── Login ────────────────────────────────────────────────────────────────
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto dto)
@@ -229,7 +183,6 @@ public class AuthController : ControllerBase
     }
 }
 
-public record RegisterDto(string Email, string Password, string FullName, bool PrivacyAccepted);
 public record LoginDto(string Email, string Password);
 public record SetRoleDto(string UserId, string Role);
 public record ChangePasswordDto(string CurrentPassword, string NewPassword);
