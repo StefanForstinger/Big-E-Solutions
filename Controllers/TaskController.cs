@@ -13,12 +13,12 @@ namespace ProjectPlanner.Controllers;
 [Authorize]
 public class TaskController : ControllerBase
 {
-    private readonly AppDbContext         _db;
+    private readonly AppDbContext _db;
     private readonly UserManager<AppUser> _userManager;
 
     public TaskController(AppDbContext db, UserManager<AppUser> userManager)
     {
-        _db          = db;
+        _db = db;
         _userManager = userManager;
     }
 
@@ -33,31 +33,34 @@ public class TaskController : ControllerBase
             .Where(t => t.ProjectId == projectId)
             .Select(t => new
             {
-                id              = t.Id,
-                text            = t.Title,
-                start_date      = t.StartDate.ToString("yyyy-MM-dd"),
-                end_date        = t.EndDate.ToString("yyyy-MM-dd"),
-                progress        = t.Progress / 100.0,
-                parent          = t.ParentId ?? 0,
-                priority        = t.Priority,
-                status          = t.Status,
-                type            = t.IsMilestone ? "milestone" : "task",
-                note            = t.Note,
+                id = t.Id,
+                text = t.Title,
+                start_date = t.StartDate.ToString("yyyy-MM-dd"),
+                end_date = t.EndDate.ToString("yyyy-MM-dd"),
+                progress = t.Progress / 100.0,
+                parent = t.ParentId ?? 0,
+                priority = t.Priority,
+                status = t.Status,
+                // dhtmlxGantt: "milestone" type kann keine Kinder haben -> "project" verwenden
+                // damit Verschachtelung erhalten bleibt; isMilestone-Flag für visuelle Darstellung
+                type = t.IsMilestone ? "project" : "task",
+                isMilestone = t.IsMilestone,
+                note = t.Note,
                 // Legacy support
-                assigneeId      = t.AssigneeId,
-                assigneeName    = t.Assignee != null ? t.Assignee.FullName : null,
+                assigneeId = t.AssigneeId,
+                assigneeName = t.Assignee != null ? t.Assignee.FullName : null,
                 // Neue Mehrfachzuweisung
-                assignments     = t.TaskAssignments.Select(ta => new {
+                assignments = t.TaskAssignments.Select(ta => new {
                     userId = ta.UserId,
                     userName = ta.User.FullName,
                     shortName = ta.User.ShortName,
                     percentage = ta.Percentage
                 }).ToList(),
                 plannedDuration = t.PlannedDuration,
-                actualDuration  = t.ActualDuration,
+                actualDuration = t.ActualDuration,
                 workSharePercent = t.WorkSharePercent,
-                color           = t.Priority == "High" ? "#E74C3C"
-                                : t.Priority == "Low"  ? "#27AE60"
+                color = t.Priority == "High" ? "#E74C3C"
+                                : t.Priority == "Low" ? "#27AE60"
                                 : (string?)null
             })
             .ToListAsync();
@@ -80,25 +83,36 @@ public class TaskController : ControllerBase
         if (!string.IsNullOrEmpty(dto.AssigneeId))
         {
             var isMember = await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == dto.AssigneeId);
-            var isOwner  = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == dto.AssigneeId);
+            var isOwner = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == dto.AssigneeId);
             if (!isMember && !isOwner)
                 return BadRequest(new { error = "Die zugewiesene Person ist kein Mitglied dieses Projekts." });
             resolvedAssigneeId = dto.AssigneeId;
         }
 
+        // Prüfen: Task darf Eltern-Meilenstein nicht überschreiten
+        if (dto.ParentId != null)
+        {
+            var parent = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == dto.ParentId && t.ProjectId == projectId);
+            if (parent != null && parent.IsMilestone)
+            {
+                if (dto.StartDate < parent.StartDate || dto.EndDate > parent.EndDate)
+                    return BadRequest(new { error = $"Task muss innerhalb des Meilensteins liegen ({parent.StartDate:dd.MM.yyyy} – {parent.EndDate:dd.MM.yyyy})." });
+            }
+        }
+
         var task = new ProjectTask
         {
-            Title           = dto.Title,
-            StartDate       = dto.StartDate,
-            EndDate         = dto.EndDate,
-            Progress        = Math.Clamp(dto.Progress, 0, 100),
-            ParentId        = dto.ParentId,
-            Priority        = dto.Priority    ?? "Medium",
-            Status          = dto.Status      ?? "Open",
-            IsMilestone     = dto.IsMilestone ?? false,
-            Note            = dto.Note,
-            ProjectId       = projectId,
-            AssigneeId      = resolvedAssigneeId,
+            Title = dto.Title,
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            Progress = Math.Clamp(dto.Progress, 0, 100),
+            ParentId = dto.ParentId,
+            Priority = dto.Priority ?? "Medium",
+            Status = dto.Status ?? "Open",
+            IsMilestone = dto.IsMilestone ?? false,
+            Note = dto.Note,
+            ProjectId = projectId,
+            AssigneeId = resolvedAssigneeId,
             PlannedDuration = dto.PlannedDuration
         };
 
@@ -119,21 +133,33 @@ public class TaskController : ControllerBase
         if (dto.AssigneeId != null && dto.AssigneeId != "")
         {
             var isMember = await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == dto.AssigneeId);
-            var isOwner  = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == dto.AssigneeId);
+            var isOwner = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == dto.AssigneeId);
             if (!isMember && !isOwner)
                 return BadRequest(new { error = "Die zugewiesene Person ist kein Mitglied dieses Projekts." });
         }
 
-        task.Title      = dto.Title;
-        task.StartDate  = dto.StartDate;
-        task.EndDate    = dto.EndDate;
-        task.Progress   = Math.Clamp(dto.Progress, 0, 100);
-        task.ParentId   = dto.ParentId;
-        if (dto.Priority        != null) task.Priority        = dto.Priority;
-        if (dto.Status          != null) task.Status          = dto.Status;
-        if (dto.IsMilestone     != null) task.IsMilestone     = dto.IsMilestone.Value;
-        if (dto.Note            != null) task.Note            = dto.Note;
-        if (dto.AssigneeId      != null) task.AssigneeId      = dto.AssigneeId == "" ? null : dto.AssigneeId;
+        // Prüfen: Task darf Eltern-Meilenstein nicht überschreiten
+        var parentId = dto.ParentId ?? task.ParentId;
+        if (parentId != null)
+        {
+            var parent = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == parentId && t.ProjectId == projectId);
+            if (parent != null && parent.IsMilestone)
+            {
+                if (dto.StartDate < parent.StartDate || dto.EndDate > parent.EndDate)
+                    return BadRequest(new { error = $"Task muss innerhalb des Meilensteins liegen ({parent.StartDate:dd.MM.yyyy} – {parent.EndDate:dd.MM.yyyy})." });
+            }
+        }
+
+        task.Title = dto.Title;
+        task.StartDate = dto.StartDate;
+        task.EndDate = dto.EndDate;
+        task.Progress = Math.Clamp(dto.Progress, 0, 100);
+        task.ParentId = dto.ParentId;
+        if (dto.Priority != null) task.Priority = dto.Priority;
+        if (dto.Status != null) task.Status = dto.Status;
+        if (dto.IsMilestone != null) task.IsMilestone = dto.IsMilestone.Value;
+        if (dto.Note != null) task.Note = dto.Note;
+        if (dto.AssigneeId != null) task.AssigneeId = dto.AssigneeId == "" ? null : dto.AssigneeId;
         if (dto.PlannedDuration != null) task.PlannedDuration = dto.PlannedDuration;
 
         await _db.SaveChangesAsync();
@@ -162,9 +188,9 @@ public class TaskController : ControllerBase
     {
         var link = new TaskLink
         {
-            Source    = dto.Source,
-            Target    = dto.Target,
-            Type      = dto.Type ?? "0",
+            Source = dto.Source,
+            Target = dto.Target,
+            Type = dto.Type ?? "0",
             ProjectId = projectId
         };
         _db.TaskLinks.Add(link);
@@ -194,7 +220,9 @@ public class TaskController : ControllerBase
             .OrderBy(c => c.CreatedAt)
             .Select(c => new
             {
-                c.Id, c.Text, c.CreatedAt,
+                c.Id,
+                c.Text,
+                c.CreatedAt,
                 authorName = c.User.FullName,
                 authorRole = c.User.Role
             })
@@ -206,12 +234,12 @@ public class TaskController : ControllerBase
     [HttpPost("{id:int}/comments")]
     public async Task<IActionResult> AddComment(int projectId, int id, [FromBody] CommentDto dto)
     {
-        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var comment = new TaskComment
         {
-            Text      = dto.Text,
-            TaskId    = id,
-            UserId    = userId,
+            Text = dto.Text,
+            TaskId = id,
+            UserId = userId,
             CreatedAt = DateTime.UtcNow
         };
         _db.TaskComments.Add(comment);
@@ -220,7 +248,9 @@ public class TaskController : ControllerBase
         var user = await _userManager.FindByIdAsync(userId);
         return Ok(new
         {
-            comment.Id, comment.Text, comment.CreatedAt,
+            comment.Id,
+            comment.Text,
+            comment.CreatedAt,
             authorName = user?.FullName,
             authorRole = user?.Role
         });
@@ -230,8 +260,8 @@ public class TaskController : ControllerBase
     [HttpDelete("{id:int}/comments/{commentId:int}")]
     public async Task<IActionResult> DeleteComment(int projectId, int id, int commentId)
     {
-        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var role    = User.FindFirstValue(ClaimTypes.Role)!;
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var role = User.FindFirstValue(ClaimTypes.Role)!;
         var comment = await _db.TaskComments.FirstOrDefaultAsync(c => c.Id == commentId && c.TaskId == id);
         if (comment == null) return NotFound();
         if (comment.UserId != userId && role is not ("Admin" or "Teacher")) return Forbid();
@@ -243,17 +273,17 @@ public class TaskController : ControllerBase
 }
 
 public record TaskDto(
-    string    Title,
-    DateTime  StartDate,
-    DateTime  EndDate,
-    int       Progress,
-    int?      ParentId,
-    string?   AssigneeId      = null,
-    string?   Priority        = null,
-    string?   Status          = null,
-    bool?     IsMilestone     = null,
-    string?   Note            = null,
-    decimal?  PlannedDuration = null
+    string Title,
+    DateTime StartDate,
+    DateTime EndDate,
+    int Progress,
+    int? ParentId,
+    string? AssigneeId = null,
+    string? Priority = null,
+    string? Status = null,
+    bool? IsMilestone = null,
+    string? Note = null,
+    decimal? PlannedDuration = null
 );
 public record LinkDto(int Source, int Target, string? Type);
 public record CommentDto(string Text);
