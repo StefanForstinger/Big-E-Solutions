@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Benutzerverwaltung – Projektplaner</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/png" href="/favicon.png">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
+    <div class="navbar-right">
+      <div style="display: flex; align-items: center; gap: 1rem; margin-right: 1rem;">
+        <a href="/pages/user-management.html" class="btn btn-outline btn-sm" style="background: var(--accent); color: white; border-color: var(--accent);">👥 Benutzer</a>
+      </div>
+      <span class="navbar-user" id="nav-user"></span>
+      <span class="role-badge" id="nav-role"></span>
+      <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
+    <div class="page-header">
+      <h1>👥 Benutzerverwaltung</h1>
+      <p class="text-muted">Schüler und Lehrer anlegen und verwalten</p>
+    </div>
+
+    <!-- Create User Card -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h3>Neuen Benutzer anlegen</h3>
+      </div>
+      <div class="card-body">
+        <form id="create-user-form" onsubmit="event.preventDefault(); createUser();" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+          <div class="form-group">
+            <label for="user-name">Vollständiger Name *</label>
+            <input id="user-name" type="text" placeholder="Max Mustermann" required>
+          </div>
+          <div class="form-group">
+            <label for="user-email">Schul-E-Mail *</label>
+            <input id="user-email" type="email" placeholder="max.mustermann@schule.at" required>
+          </div>
+          <div class="form-group">
+            <label for="user-role">Rolle *</label>
+            <select id="user-role" required>
+              <option value="Student">Schüler</option>
+              <option value="Teacher">Lehrer</option>
+              <option value="Admin">Administrator</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button id="btn-create-user" type="submit" class="btn btn-success" style="width: 100%;">
+              ➕ Benutzer anlegen
+            </button>
+          </div>
+        </form>
+        <div id="msg-create" class="alert alert-hidden" style="margin-top: 1rem;"></div>
+        
+        <div id="created-user-info" class="alert alert-success" style="margin-top: 1rem; display: none;">
+          <strong>✓ Benutzer erfolgreich angelegt!</strong><br>
+          <div style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(0,0,0,0.1); border-radius: 4px; font-family: monospace;">
+            <div><strong>E-Mail:</strong> <span id="created-email"></span></div>
+            <div><strong>Standardpasswort:</strong> <code id="created-password" style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px; font-weight: bold;"></code></div>
+          </div>
+          <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+            ℹ️ Der Benutzer muss dieses Passwort beim ersten Login ändern.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users List -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Alle Benutzer</h3>
+        <button class="btn btn-sm btn-outline" onclick="loadUsers()">🔄 Aktualisieren</button>
+      </div>
+      <div class="card-body">
+        <div id="users-loading" style="text-align: center; padding: 2rem; color: var(--gray-600);">
+          Lädt...
+        </div>
+        <div id="users-list" style="display: none;">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>E-Mail</th>
+                  <th>Rolle</th>
+                  <th>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div id="users-empty" style="display: none; text-align: center; padding: 2rem; color: var(--gray-600);">
+          Keine Benutzer gefunden.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Role Modal -->
+  <div id="role-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3>Rolle ändern</h3>
+        <button class="modal-close" onclick="closeRoleModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="modal-user-name">Benutzer</label>
+          <input id="modal-user-name" type="text" readonly style="background: var(--gray-100);">
+        </div>
+        <div class="form-group">
+          <label for="modal-role">Neue Rolle</label>
+          <select id="modal-role">
+            <option value="Student">Schüler</option>
+            <option value="Teacher">Lehrer</option>
+            <option value="Admin">Administrator</option>
+          </select>
+        </div>
+        <div id="msg-role" class="alert alert-hidden"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeRoleModal()">Abbrechen</button>
+        <button id="btn-save-role" class="btn btn-primary" onclick="saveRole()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      max-height: 90vh;
+      overflow-y: auto;
+      width: 100%;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+      color: var(--gray-600);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+    .modal-close:hover {
+      background: var(--gray-100);
+    }
+    .modal-body {
+      padding: 1.5rem;
+    }
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+    .table-responsive {
+      overflow-x: auto;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table th, .table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .table th {
+      background: var(--gray-50);
+      font-weight: 600;
+      color: var(--gray-700);
+    }
+    .table tbody tr:hover {
+      background: var(--gray-50);
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .badge-admin {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+    .badge-teacher {
+      background: var(--warning-light);
+      color: var(--warning);
+    }
+    .badge-student {
+      background: var(--success-light);
+      color: var(--success);
+    }
+  </style>
+
+  <script src="/js/api.js"></script>
+  <script>
+    let currentUserId = null;
+    let currentUserName = null;
+
+    // Check if user is admin and populate navbar
+    async function checkAdmin() {
+      const user = await fetchMe();
+      if (!user || user.role !== 'Admin') {
+        window.location.href = '/pages/dashboard.html';
+      }
+      
+      // Populate navbar
+      document.getElementById('nav-user').textContent = user.fullName;
+      const roleEl = document.getElementById('nav-role');
+      roleEl.textContent = user.role;
+      roleEl.className = 'role-badge role-' + user.role.toLowerCase();
+    }
+
+    async function createUser() {
+      const name = document.getElementById('user-name').value.trim();
+      const email = document.getElementById('user-email').value.trim();
+      const role = document.getElementById('user-role').value;
+
+      if (!name || !email || !role) {
+        showAlert('msg-create', 'Bitte alle Felder ausfüllen.', 'error');
+        return;
+      }
+
+      setLoading('btn-create-user', true);
+      hideAlert('msg-create');
+      document.getElementById('created-user-info').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/create-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+          },
+          body: JSON.stringify({
+            email: email,
+            fullName: name,
+            role: role
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          // Show success with credentials
+          document.getElementById('created-email').textContent = email;
+          document.getElementById('created-password').textContent = data.defaultPassword;
+          document.getElementById('created-user-info').style.display = 'block';
+          
+          // Clear form
+          document.getElementById('create-user-form').reset();
+          
+          // Reload users list
+          loadUsers();
+        } else {
+          const errMsg = data.error ?? (Array.isArray(data.errors) 
+            ? data.errors.map(e => e.description).join(' ') 
+            : 'Benutzer konnte nicht angelegt werden.');
+          showAlert('msg-create', errMsg, 'error');
+        }
+      } catch (err) {
+        showAlert('msg-create', 'Server nicht erreichbar.', 'error');
+      } finally {
+        setLoading('btn-create-user', false);
+      }
+    }
+
+    async function loadUsers() {
+      document.getElementById('users-loading').style.display = 'block';
+      document.getElementById('users-list').style.display = 'none';
+      document.getElementById('users-empty').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/getAll', {
+          headers: {
+            'Authorization': 'Bearer ' + getToken()
+          }
+        });
+
+        if (res.ok) {
+          const users = await res.json();
+          if (users.length === 0) {
+            document.getElementById('users-loading').style.display = 'none';
+            document.getElementById('users-empty').style.display = 'block';
+          } else {
+            renderUsers(users);
+            document.getElementById('users-loading').style.display = 'none';
+            document.getElementById('users-list').style.display = 'block';
+          }
+        } else {
+          document.getElementById('users-loading').innerHTML = '<span style="color: var(--danger);">Fehler beim Laden der Benutzer.</span>';
+        }
+      } catch (err) {
+        document.getElementById('users-loading').innerHTML = '<span style="color: var(--danger);">Server nicht erreichbar.</span>';
+      }
+    }
+
+    function renderUsers(users) {
+      const tbody = document.getElementById('users-tbody');
+      tbody.innerHTML = users.map(user => {
+        const badgeClass = user.role === 'Admin' ? 'badge-admin' : 
+                          user.role === 'Teacher' ? 'badge-teacher' : 'badge-student';
+        return `
+          <tr>
+            <td><strong>${escapeHtml(user.fullName)}</strong></td>
+            <td>${escapeHtml(user.email)}</td>
+            <td><span class="badge ${badgeClass}">${escapeHtml(user.role)}</span></td>
+            <td>
+              <button class="btn btn-sm btn-outline" onclick="openRoleModal('${user.id}', '${escapeHtml(user.fullName)}', '${user.role}')">
+                Rolle ändern
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openRoleModal(userId, userName, currentRole) {
+      currentUserId = userId;
+      currentUserName = userName;
+      document.getElementById('modal-user-name').value = userName;
+      document.getElementById('modal-role').value = currentRole;
+      document.getElementById('role-modal').style.display = 'flex';
+      hideAlert('msg-role');
+    }
+
+    function closeRoleModal() {
+      document.getElementById('role-modal').style.display = 'none';
+      currentUserId = null;
+      currentUserName = null;
+    }
+
+    async function saveRole() {
+      const newRole = document.getElementById('modal-role').value;
+
+      setLoading('btn-save-role', true);
+      hideAlert('msg-role');
+
+      try {
+        const res = await fetch('/api/auth/setRole', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+          },
+          body: JSON.stringify({
+            userId: currentUserId,
+            role: newRole
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          showAlert('msg-role', `Rolle erfolgreich auf '${newRole}' geändert.`, 'success');
+          setTimeout(() => {
+            closeRoleModal();
+            loadUsers();
+          }, 1000);
+        } else {
+          showAlert('msg-role', data.error ?? 'Rolle konnte nicht geändert werden.', 'error');
+        }
+      } catch (err) {
+        showAlert('msg-role', 'Server nicht erreichbar.', 'error');
+      } finally {
+        setLoading('btn-save-role', false);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize
+    checkAdmin();
+    loadUsers();
+  </script>
+</body>
+</html>

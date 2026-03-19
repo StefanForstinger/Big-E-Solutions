@@ -3,675 +3,231 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Projektplaner – Gantt</title>
+  <title>Projektplaner – Gantt Pro</title>
   <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
   <link  href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css" rel="stylesheet">
   <link  rel="stylesheet" href="/css/style.css">
   <link rel="icon" type="image/png" href="/favicon.png">
   <style>
-    html, body { height:100%; overflow:hidden; }
+    html, body { height:100%; overflow:hidden; margin:0; font-family: sans-serif; }
     .gantt-layout { height:100vh; display:flex; flex-direction:column; }
     #gantt_here  { flex:1; min-height:0; }
 
+    /* Detail Panel Styling */
     #detail-panel {
-      position:fixed; right:-420px; top:56px; bottom:0; width:400px;
-      background:var(--white); box-shadow:-4px 0 24px rgba(0,0,0,.12);
+      position:fixed; right:-420px; top:112px; bottom:0; width:400px;
+      background:#fff; box-shadow:-4px 0 24px rgba(0,0,0,.12);
       z-index:200; transition:right .3s ease; display:flex; flex-direction:column;
-      overflow:hidden;
     }
     #detail-panel.open { right:0; }
-    .detail-header {
-      background:var(--navy); color:var(--white); padding:1rem 1.2rem;
-      display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
-    }
-    .detail-header h3 { font-size:1rem; color:var(--white); margin:0; }
-    .detail-close { background:none; border:none; color:rgba(255,255,255,.7); font-size:1.3rem; cursor:pointer; line-height:1; }
-    .detail-close:hover { color:var(--white); }
+    .detail-header { background:var(--navy, #001f3f); color:#fff; padding:1rem; display:flex; justify-content:space-between; }
     .detail-body { flex:1; overflow-y:auto; padding:1.2rem; display:flex; flex-direction:column; gap:1rem; }
-
-    .detail-tabs { display:flex; gap:.35rem; background:var(--gray-200); border-radius:8px; padding:.25rem; }
-    .detail-tab { flex:1; padding:.4rem; background:transparent; border:none; border-radius:6px; font-size:.82rem; font-weight:600; color:var(--gray-600); cursor:pointer; transition:all .15s; }
-    .detail-tab.active { background:var(--white); color:var(--navy); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+    .detail-tabs { display:flex; gap:.35rem; background:#eee; padding:.25rem; border-radius:8px; }
+    .detail-tab { flex:1; border:none; padding:.5rem; cursor:pointer; border-radius:6px; font-weight:bold; }
+    .detail-tab.active { background:#fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .detail-pane { display:none; }
     .detail-pane.active { display:block; }
 
-    .info-row { display:flex; justify-content:space-between; align-items:center; font-size:.85rem; padding:.4rem 0; border-bottom:1px solid var(--gray-200); }
-    .info-row:last-child { border-bottom:none; }
-    .info-label { color:var(--gray-600); font-weight:600; }
-    .info-value { color:var(--gray-800); }
-
-    .status-open       { background:#dbeafe; color:#1e40af; }
+    /* Badges & Form */
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+    .status-open { background:#dbeafe; color:#1e40af; }
     .status-inprogress { background:#fef3c7; color:#92400e; }
-    .status-done       { background:#dcfce7; color:#15803d; }
-    .status-blocked    { background:#fee2e2; color:#b91c1c; }
-    .prio-high   { background:#fee2e2; color:#b91c1c; }
-    .prio-medium { background:#fef3c7; color:#92400e; }
-    .prio-low    { background:#dcfce7; color:#15803d; }
+    .status-done { background:#dcfce7; color:#15803d; }
+    .detail-edit-row { display:flex; flex-direction:column; gap:4px; margin-bottom: 10px; }
+    .detail-edit-row input, .detail-edit-row select, .detail-edit-row textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
 
-    .comment-list { display:flex; flex-direction:column; gap:.75rem; }
-    .comment-item { background:var(--gray-100); border-radius:8px; padding:.75rem; }
-    .comment-meta { font-size:.75rem; color:var(--gray-600); margin-bottom:.3rem; display:flex; align-items:center; gap:.5rem; }
-    .comment-author { font-weight:700; color:var(--navy); }
-    .comment-text { font-size:.88rem; color:var(--gray-800); line-height:1.5; white-space:pre-wrap; }
-    .comment-delete { background:none; border:none; cursor:pointer; color:var(--gray-400); font-size:.8rem; margin-left:auto; }
-    .comment-delete:hover { color:var(--red); }
-    .comment-input-wrap { display:flex; gap:.5rem; margin-top:.5rem; }
-    .comment-input-wrap textarea { flex:1; border-radius:8px; border:1.5px solid var(--gray-400); padding:.5rem; font-size:.85rem; font-family:inherit; resize:none; height:60px; }
-    .comment-input-wrap textarea:focus { outline:none; border-color:var(--accent); }
-    .btn-comment { padding:.5rem .85rem; background:var(--accent); color:var(--white); border:none; border-radius:8px; font-size:.82rem; font-weight:700; cursor:pointer; white-space:nowrap; align-self:flex-end; }
-    .btn-comment:hover { background:var(--accent-dk); }
-    .no-comments { font-size:.85rem; color:var(--gray-600); text-align:center; padding:1rem; font-style:italic; }
-
-    .progress-bar-wrap { background:var(--gray-200); border-radius:20px; height:8px; overflow:hidden; flex:1; }
-    .progress-bar-fill { height:100%; border-radius:20px; }
-
-    .detail-edit-row { display:flex; flex-direction:column; gap:.3rem; font-size:.85rem; }
-    .detail-edit-row label { font-weight:600; color:var(--gray-600); font-size:.8rem; }
-    .detail-edit-row input,
-    .detail-edit-row select,
-    .detail-edit-row textarea { padding:.45rem .7rem; border-radius:6px; border:1.5px solid var(--gray-400); font-size:.85rem; font-family:inherit; }
-    .detail-edit-row input:focus,
-    .detail-edit-row select:focus,
-    .detail-edit-row textarea:focus { outline:none; border-color:var(--accent); }
-    .detail-edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
-    .panel-save-btn { width:100%; margin-top:.5rem; }
+    .comment-item { background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #ddd; }
   </style>
 </head>
 <body>
+
 <div class="gantt-layout">
-  <div class="gantt-toolbar">
-    <div class="toolbar-left">
-      <a href="/pages/dashboard.html">← Dashboard</a>
-      <h2 id="project-title">Gantt-Diagramm</h2>
+  <nav class="navbar">
+    <a href="/pages/dashboard.html" class="navbar-brand">🗓 Projektplaner</a>
+    <div class="navbar-right">
+      <div id="admin-nav-link" style="display: none; margin-right: 1rem;">
+        <a href="/pages/user-management.html" class="btn btn-outline btn-sm">👥 Benutzer</a>
+      </div>
+      <span id="nav-user"></span> <span id="nav-role" class="role-badge"></span>
+      <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
     </div>
-    <div class="toolbar-right">
-      <button class="btn btn-white btn-sm" onclick="openAddModal()">+ Aufgabe</button>
-      <button class="btn btn-white btn-sm" onclick="openAddModal(true)">🏁 Meilenstein</button>
-      <button class="btn btn-white btn-sm" onclick="exportGanttExcel()" title="Als Excel exportieren">📊 Excel</button>
-      <button class="btn btn-white btn-sm" onclick="exportGanttPdf()" title="Als PDF exportieren">📄 PDF</button>
-      <button class="btn btn-ghost btn-sm" style="color:white;border-color:rgba(255,255,255,.4)" onclick="logout()">Abmelden</button>
+  </nav>
+
+  <div class="gantt-toolbar">
+    <div class="toolbar-left"><h2 id="project-title">Lädt...</h2></div>
+    <div class="toolbar-right" id="toolbar-actions">
+      <button class="btn btn-white btn-sm" onclick="exportGanttExcel()">📊 Excel</button>
+      <button class="btn btn-white btn-sm" onclick="exportGanttPdf()">📄 PDF</button>
     </div>
   </div>
   <div id="gantt_here"></div>
 </div>
 
-<!-- Slide-in Detail-Panel -->
-<div id="detail-panel">
-  <div class="detail-header">
-    <h3 id="dp-title">Aufgabe</h3>
-    <button class="detail-close" onclick="closeDetailPanel()">✕</button>
-  </div>
-  <div class="detail-body">
-    <div class="detail-tabs">
-      <button class="detail-tab active" onclick="switchTab('info')">ℹ️ Info</button>
-      <button class="detail-tab"        onclick="switchTab('edit')">✏️ Bearbeiten</button>
-      <button class="detail-tab"        onclick="switchTab('comments')">💬 Kommentare</button>
+<div id="modal-add-task" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h2 id="add-modal-title">Neue Aufgabe</h2><button class="modal-close" onclick="closeModal('modal-add-task')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="t-parent-id">
+      <div class="form-group"><label>Name *</label><input id="t-title" type="text" placeholder="Aufgabenname..."></div>
+      <div class="form-row">
+        <div class="form-group"><label>Start *</label><input id="t-start" type="date"></div>
+        <div class="form-group"><label>Ende *</label><input id="t-end" type="date"></div>
+      </div>
+      <div class="form-group"><label>Zuständig</label><select id="t-assignee"></select></div>
+      <div id="msg-add-task" style="color:red; min-height:1.2em;"></div>
     </div>
-
-    <!-- Info Tab -->
-    <div id="tab-info" class="detail-pane active">
-      <div class="info-row"><span class="info-label">Status</span><span id="dp-status" class="badge"></span></div>
-      <div class="info-row"><span class="info-label">Priorität</span><span id="dp-priority" class="badge"></span></div>
-      <div class="info-row"><span class="info-label">Zeitraum</span><span id="dp-dates" class="info-value"></span></div>
-      <div class="info-row"><span class="info-label">Zuständig</span><span id="dp-assignee" class="info-value"></span></div>
-      <div class="info-row">
-        <span class="info-label">Fortschritt</span>
-        <div style="display:flex;align-items:center;gap:.5rem;flex:1;margin-left:1rem">
-          <div class="progress-bar-wrap"><div id="dp-progress-bar" class="progress-bar-fill" style="background:var(--accent)"></div></div>
-          <span id="dp-progress-pct" style="font-size:.82rem;font-weight:700;color:var(--navy);white-space:nowrap"></span>
-        </div>
-      </div>
-      <div class="info-row" id="dp-note-row" style="display:none">
-        <span class="info-label">Notiz</span>
-        <span id="dp-note" class="info-value" style="font-size:.83rem;max-width:200px;word-break:break-word"></span>
-      </div>
-    </div>
-
-    <!-- Edit Tab -->
-    <div id="tab-edit" class="detail-pane">
-      <input type="hidden" id="et-id">
-      <div class="detail-edit-row"><label>Aufgabenname *</label><input id="et-title" type="text"></div>
-      <div class="detail-edit-grid">
-        <div class="detail-edit-row"><label>Startdatum *</label><input id="et-start" type="date"></div>
-        <div class="detail-edit-row"><label>Enddatum *</label><input id="et-end" type="date"></div>
-      </div>
-      <div class="detail-edit-row">
-        <label>Fortschritt: <span id="et-pct">0%</span></label>
-        <input id="et-progress" type="range" min="0" max="100" step="5"
-               oninput="document.getElementById('et-pct').textContent=this.value+'%'">
-      </div>
-      <div class="detail-edit-grid">
-        <div class="detail-edit-row">
-          <label>Status</label>
-          <select id="et-status">
-            <option value="Open">Offen</option>
-            <option value="InProgress">In Arbeit</option>
-            <option value="Done">Abgeschlossen</option>
-            <option value="Blocked">Blockiert</option>
-          </select>
-        </div>
-        <div class="detail-edit-row">
-          <label>Priorität</label>
-          <select id="et-priority">
-            <option value="Low">Niedrig</option>
-            <option value="Medium">Mittel</option>
-            <option value="High">Hoch</option>
-          </select>
-        </div>
-      </div>
-      <div class="detail-edit-row">
-        <label>Zuständige Person</label>
-        <!-- FIX: Dropdown wird mit Projekt-Mitgliedern befüllt, nicht allen Usern -->
-        <select id="et-assignee"><option value="">— Nicht zugewiesen —</option></select>
-      </div>
-      <div class="detail-edit-row">
-        <label>Meilenstein</label>
-        <select id="et-milestone"><option value="false">Nein</option><option value="true">Ja</option></select>
-      </div>
-      <div class="detail-edit-row">
-        <label>Notiz</label>
-        <textarea id="et-note" rows="3" placeholder="Optionale Notiz…"></textarea>
-      </div>
-      <div id="msg-edit-task" style="font-size:.82rem;color:#b91c1c;min-height:1em"></div>
-      <button class="btn btn-primary panel-save-btn" onclick="saveEditTask()">💾 Speichern</button>
-      <button class="btn btn-danger panel-save-btn" style="margin-top:.35rem" onclick="deleteTaskFromPanel()">🗑 Aufgabe löschen</button>
-    </div>
-
-    <!-- Kommentare Tab -->
-    <div id="tab-comments" class="detail-pane">
-      <div id="comment-list" class="comment-list"></div>
-      <div class="comment-input-wrap">
-        <textarea id="comment-input" placeholder="Kommentar schreiben…"></textarea>
-        <button class="btn-comment" onclick="submitComment()">Senden</button>
-      </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-task')">Abbrechen</button>
+      <button id="btn-add-task" class="btn btn-primary" onclick="addTask()">Speichern & Erstellen</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Aufgabe / Meilenstein -->
-<div id="modal-add-task" class="modal-overlay">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 id="add-modal-title">Neue Aufgabe</h2>
-      <button class="modal-close" onclick="closeModal('modal-add-task')">✕</button>
+<div id="detail-panel">
+  <div class="detail-header"><h3 id="dp-title">Aufgabe</h3><button onclick="closeDetailPanel()" style="background:none; border:none; color:white; cursor:pointer;">✕</button></div>
+  <div class="detail-body">
+    <div class="detail-tabs">
+      <button class="detail-tab active" onclick="switchTab('info')">Info</button>
+      <button class="detail-tab" onclick="switchTab('edit')">Bearbeiten</button>
+      <button class="detail-tab" onclick="switchTab('comments')">Kommentare</button>
     </div>
-    <div class="form-group"><label for="t-title">Name *</label><input id="t-title" type="text" placeholder="z.B. Design erstellen"></div>
-    <div class="form-row" id="t-date-row">
-      <div class="form-group"><label for="t-start">Startdatum *</label><input id="t-start" type="date"></div>
-      <div class="form-group"><label for="t-end">Enddatum *</label><input id="t-end" type="date"></div>
+    <div id="tab-info" class="detail-pane active">
+      <div id="dp-status" class="badge"></div>
+      <p><strong>Zeitraum:</strong> <span id="dp-dates"></span></p>
+      <p><strong>Zuständig:</strong> <span id="dp-assignee"></span></p>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="t-status">Status</label>
-        <select id="t-status">
-          <option value="Open">Offen</option>
-          <option value="InProgress">In Arbeit</option>
-          <option value="Done">Abgeschlossen</option>
-          <option value="Blocked">Blockiert</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="t-priority">Priorität</label>
-        <select id="t-priority">
-          <option value="Medium">Mittel</option>
-          <option value="High">Hoch</option>
-          <option value="Low">Niedrig</option>
-        </select>
-      </div>
+    <div id="tab-edit" class="detail-pane">
+      <input type="hidden" id="et-id">
+      <div class="detail-edit-row"><label>Name</label><input id="et-title" type="text"></div>
+      <button class="btn btn-primary" onclick="saveEditTask()">Speichern</button>
+      <button class="btn btn-danger" onclick="deleteTaskFromPanel()" style="margin-top:10px;">🗑 Löschen</button>
     </div>
-    <div class="form-group" id="t-progress-wrap">
-      <label for="t-progress">Fortschritt: <span id="progress-label">0%</span></label>
-      <input id="t-progress" type="range" min="0" max="100" value="0" step="5"
-             style="width:100%" oninput="document.getElementById('progress-label').textContent=this.value+'%'">
-    </div>
-    <div class="form-group">
-      <label for="t-assignee">Zuständige Person</label>
-      <!-- FIX: nur Projekt-Mitglieder -->
-      <select id="t-assignee"><option value="">— Nicht zugewiesen —</option></select>
-    </div>
-    <div id="msg-add-task" class="alert alert-hidden"></div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-add-task')">Abbrechen</button>
-      <button id="btn-add-task" class="btn btn-primary" onclick="addTask()">Erstellen</button>
+    <div id="tab-comments" class="detail-pane">
+      <div id="comment-list"></div>
+      <textarea id="comment-input" style="width:100%; margin-top:10px;" placeholder="Kommentar..."></textarea>
+      <button class="btn-primary" onclick="submitComment()">Senden</button>
     </div>
   </div>
 </div>
 
 <script src="/js/api.js"></script>
 <script>
-if (!isLoggedIn()) window.location.href = '/index.html';
+  if (!isLoggedIn()) window.location.href = '/index.html';
 
-const projectId   = new URLSearchParams(location.search).get('projectId') ?? '1';
-const currentUid  = getUser()?.nameid ?? '';
-const currentRole = getUserRole();
+  const projectId = new URLSearchParams(location.search).get('projectId') ?? '1';
+  const currentRole = getUserRole();
+  let suppressEvents = false;
+  let addingMilestone = false;
 
-// FIX: nur Projekt-Mitglieder werden geladen
-let projectMembers = [];
+  // UI Setup
+  document.getElementById('nav-user').textContent = getUserName();
+  if (currentRole === 'Admin') document.getElementById('admin-nav-link').style.display = 'block';
 
-// FIX: Verhindert dass loadGantt()/clearAll()/parse() Gantt-interne Events als API-Calls auslöst
-// Gilt für Update, Delete und LinkDelete
-let suppressEvents = false;
+  // Gantt Init
+  gantt.config.date_format = '%Y-%m-%d';
+  gantt.config.xml_date = '%Y-%m-%d';
+  gantt.config.readonly = (currentRole === 'Teacher');
+  gantt.init('gantt_here');
 
-let addingMilestone = false;
-let activeTaskId    = null;
-
-// ── Rollen-basierte Toolbar ───────────────────────────────────────────────
-(function setupToolbar() {
-  const isReadOnly = currentRole === 'Teacher';
-  if (!isReadOnly) {
-    const actions = document.getElementById('toolbar-actions');
-    actions.insertAdjacentHTML('afterbegin',
-      `<button class="btn btn-white btn-sm" onclick="openAddModal()">+ Aufgabe</button>
-       <button class="btn btn-white btn-sm" onclick="openAddModal(true)">🏁 Meilenstein</button>`);
-  }
-  // Bearbeiten-Tab ausblenden für Lehrer
-  if (isReadOnly) {
-    document.querySelectorAll('.detail-tab')[1].style.display = 'none';
-  }
-})();
-
-// ── Projekt-Mitglieder laden (für Zuweisung) ─────────────────────────────
-async function loadProjectMembers() {
-  try {
-    const res = await apiFetch(`/project/${projectId}/members`);
-    if (!res.ok) return;
-    projectMembers = await res.json();
-    populateMemberSelects();
-  } catch { /* ignore */ }
-}
-
-function populateMemberSelects() {
-  const opts = '<option value="">— Nicht zugewiesen —</option>' +
-    projectMembers.map(m =>
-      `<option value="${esc(m.userId)}">${esc(m.fullName)} (${esc(m.email ?? '')})</option>`
-    ).join('');
-  document.getElementById('t-assignee').innerHTML  = opts;
-  document.getElementById('et-assignee').innerHTML = opts;
-}
-
-function setAssigneeSelected(selectId, selectedUserId) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-  for (const opt of sel.options) {
-    opt.selected = opt.value === (selectedUserId ?? '');
-  }
-}
-
-// ── Gantt Konfiguration ───────────────────────────────────────────────────
-gantt.config.date_format         = '%Y-%m-%d';
-gantt.config.xml_date            = '%Y-%m-%d';
-gantt.config.drag_progress       = currentRole !== 'Teacher';
-gantt.config.drag_resize         = currentRole !== 'Teacher';
-gantt.config.drag_move           = currentRole !== 'Teacher';
-gantt.config.fit_tasks           = true;
-gantt.config.open_tree_initially = true;
-gantt.config.row_height          = 38;
-gantt.config.bar_height          = 26;
-gantt.config.details_on_dblclick = false;
-gantt.config.show_links          = true;
-gantt.config.readonly            = currentRole === 'Teacher';
-
-gantt.config.columns = [
-  { name:'text',      label:'Aufgabe',   width:200, tree:true,
-    template: t => (t.type==='milestone' ? '🏁 ' : '') + esc(t.text) },
-  { name:'start_date',label:'Start',     width:90  },
-  { name:'end_date',  label:'Ende',      width:90  },
-  { name:'progress',  label:'%',         width:50,
-    template: t => Math.round((t.progress??0)*100)+'%' },
-  { name:'status',    label:'Status',    width:90,
-    template: t => {
-      const map = { Open:'Offen', InProgress:'In Arbeit', Done:'Fertig', Blocked:'Blockiert' };
-      return `<span style="font-size:.75em">${map[t.status]??t.status??''}</span>`;
-    }},
-  { name:'assignee',  label:'Zuständig', width:110,
-    template: t => t.assigneeName
-      ? `<span style="font-size:.75em">👤 ${esc(t.assigneeName)}</span>`
-      : '<span style="color:#aaa;font-size:.75em">—</span>' },
-  { name:'add', label:'', width:44 }
-];
-
-gantt.init('gantt_here');
-
-// Doppelklick → Detail-Panel
-gantt.attachEvent('onTaskDblClick', (id) => { openDetailPanel(id); return false; });
-
-// Drag → auto-speichern (nur bei echten Benutzer-Aktionen, nicht beim Laden)
-gantt.attachEvent('onAfterTaskUpdate', async (id, task) => {
-  if (suppressEvents) return;
-  const fmt = gantt.templates.format_date;
-  await apiFetch(`/projects/${projectId}/tasks/${id}`, {
-    method:'PUT',
-    body: JSON.stringify({
-      title:     task.text,
-      startDate: fmt(task.start_date),
-      endDate:   fmt(task.end_date),
-      progress:  Math.round((task.progress??0)*100),
-      parentId:  task.parent ? parseInt(task.parent) : null,
-      status:    task.status,
-      priority:  task.priority,
-      isMilestone: task.type === 'milestone',
-      assigneeId:  task.assigneeId ?? ''
-    })
+  // --- DER FIX FÜR DAS PLUS-SYMBOL ---
+  gantt.attachEvent("onTaskCreated", function(task){
+    // Wenn jemand auf das "+" klickt:
+    document.getElementById('t-parent-id').value = task.parent || "";
+    openAddModal(task.type === "milestone");
+    return false; // Verhindert, dass Gantt den Task lokal (temporär) anlegt
   });
-});
 
-gantt.attachEvent('onProgressDragEnd', async (id, progress) => {
-  const task = gantt.getTask(id);
-  const fmt  = gantt.templates.format_date;
-  await apiFetch(`/projects/${projectId}/tasks/${id}`, {
-    method:'PUT',
-    body: JSON.stringify({
-      title:     task.text,
-      startDate: fmt(task.start_date),
-      endDate:   fmt(task.end_date),
-      progress:  Math.round(progress*100),
-      parentId:  task.parent ? parseInt(task.parent) : null,
-      status:    task.status
-    })
-  });
-  if (activeTaskId == id) refreshInfoTab(task, Math.round(progress*100));
-});
-
-// Links
-gantt.attachEvent('onAfterLinkAdd', async (id, link) => {
-  const res = await apiFetch(`/projects/${projectId}/tasks/links`, {
-    method:'POST',
-    body: JSON.stringify({ source: parseInt(link.source), target: parseInt(link.target), type: String(link.type??'0') })
-  });
-  if (res.ok) {
-    const data = await res.json();
-    gantt.changeLinkId(id, data.tid);
-  }
-});
-
-gantt.attachEvent('onAfterLinkDelete', async (id) => {
-  if (suppressEvents) return;
-  await apiFetch(`/projects/${projectId}/tasks/links/${id}`, { method:'DELETE' });
-});
-
-// FIX: nur löschen wenn nicht durch reload ausgelöst
-gantt.attachEvent('onAfterTaskDelete', async (id) => {
-  if (suppressEvents) return;
-  await apiFetch(`/projects/${projectId}/tasks/${id}`, { method:'DELETE' });
-  if (activeTaskId == id) closeDetailPanel();
-});
-
-// ── Gantt Daten laden ─────────────────────────────────────────────────────
-async function loadGantt() {
-  try {
-    const res  = await apiFetch(`/projects/${projectId}/tasks`);
-    const data = await res.json();
-
-    // suppressEvents=true verhindert, dass clearAll()/parse() API-Calls auslösen
+  // Daten laden
+  async function loadGantt() {
     suppressEvents = true;
-    gantt.clearAll();
-    gantt.parse(data);
-    suppressEvents = false;
+    try {
+      const res = await apiFetch(`/projects/${projectId}/tasks`);
+      const data = await res.json();
+      gantt.clearAll();
+      gantt.parse(data);
 
-    // Projekttitel setzen
-    if (!document.getElementById('project-title').dataset.loaded) {
       const projRes = await apiFetch(`/project/${projectId}`);
       if (projRes.ok) {
-        const proj = await projRes.json();
-        document.getElementById('project-title').textContent = proj.name ?? 'Gantt';
-        document.getElementById('project-title').dataset.loaded = '1';
+        const p = await projRes.json();
+        document.getElementById('project-title').textContent = p.name;
       }
-    }
-  } catch(e) {
-    suppressEvents = false;
-    if (e.message !== 'Nicht eingeloggt') alert('Fehler beim Laden.');
+    } finally { suppressEvents = false; }
   }
-}
 
-// ── Aufgabe hinzufügen ────────────────────────────────────────────────────
-function openAddModal(milestone = false) {
-  addingMilestone = milestone;
-  document.getElementById('add-modal-title').textContent = milestone ? 'Neuer Meilenstein' : 'Neue Aufgabe';
-  document.getElementById('t-progress-wrap').style.display = milestone ? 'none' : 'block';
-  document.getElementById('t-date-row').style.display = milestone ? 'none' : 'flex';
-  hideAlert('msg-add-task');
-  openModal('modal-add-task');
-}
+  // Task erstellen (API POST)
+  async function addTask() {
+    const title = document.getElementById('t-title').value.trim();
+    const start = document.getElementById('t-start').value;
+    const end = document.getElementById('t-end').value;
+    const parentId = document.getElementById('t-parent-id').value;
 
-async function addTask() {
-  const title      = document.getElementById('t-title').value.trim();
-  const start      = addingMilestone
-    ? document.getElementById('t-start').value || new Date().toISOString().slice(0,10)
-    : document.getElementById('t-start').value;
-  const end        = addingMilestone ? start : document.getElementById('t-end').value;
-  const progress   = addingMilestone ? 0 : parseInt(document.getElementById('t-progress').value);
-  const status     = document.getElementById('t-status').value;
-  const priority   = document.getElementById('t-priority').value;
-  const assigneeId = document.getElementById('t-assignee').value || null;
+    if (!title || !start || !end) {
+      document.getElementById('msg-add-task').textContent = "Bitte alles ausfüllen!";
+      return;
+    }
 
-  if (!title) { showAlert('msg-add-task','Bitte einen Namen eingeben.'); return; }
-  if (!addingMilestone && !start) { showAlert('msg-add-task','Bitte Startdatum ausfüllen.'); return; }
-  if (!addingMilestone && end < start) { showAlert('msg-add-task','Enddatum muss nach Startdatum liegen.'); return; }
+    setLoading('btn-add-task', true);
+    try {
+      const res = await apiFetch(`/projects/${projectId}/tasks`, {
+        method:'POST',
+        body: JSON.stringify({
+          title,
+          startDate: start,
+          endDate: end,
+          parentId: parentId ? parseInt(parentId) : null,
+          status: 'Open',
+          priority: 'Medium',
+          isMilestone: addingMilestone
+        })
+      });
 
-  setLoading('btn-add-task', true);
-  try {
-    const res = await apiFetch(`/projects/${projectId}/tasks`, {
-      method:'POST',
-      body: JSON.stringify({ title, startDate:start, endDate:end, progress, parentId:null,
-                             status, priority, assigneeId, isMilestone: addingMilestone })
+      if (res.ok) {
+        closeModal('modal-add-task');
+        document.getElementById('t-title').value = "";
+        await loadGantt(); // Lädt alles frisch vom Server -> Task ist da!
+      }
+    } finally { setLoading('btn-add-task', false); }
+  }
+
+  // Drag & Drop Updates
+  gantt.attachEvent('onAfterTaskUpdate', async (id, task) => {
+    if (suppressEvents || String(id).length > 10) return;
+    const fmt = gantt.templates.format_date;
+    await apiFetch(`/projects/${projectId}/tasks/${id}`, {
+      method:'PUT',
+      body: JSON.stringify({
+        title: task.text,
+        startDate: fmt(task.start_date),
+        endDate: fmt(task.end_date),
+        progress: Math.round((task.progress??0)*100),
+        status: task.status || 'Open'
+      })
     });
-    if (res.ok) {
-      closeModal('modal-add-task');
-      document.getElementById('t-title').value    = '';
-      document.getElementById('t-progress').value = '0';
-      document.getElementById('progress-label').textContent = '0%';
-      hideAlert('msg-add-task');
-      await loadGantt(); // FIX: reload läuft jetzt mit suppress=true → kein versehentliches Löschen
-    } else {
-      const err = await res.json().catch(() => ({}));
-      showAlert('msg-add-task', err.error ?? err.title ?? 'Fehler beim Erstellen.');
+  });
+
+  // Toolbar Buttons einfügen
+  (function setupToolbar() {
+    const actions = document.getElementById('toolbar-actions');
+    if(currentRole !== 'Teacher') {
+      actions.insertAdjacentHTML('afterbegin', `
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Aufgabe</button>
+            <button class="btn btn-white btn-sm" onclick="openAddModal(true)">🏁 Meilenstein</button>
+        `);
     }
-  } finally { setLoading('btn-add-task', false); }
-}
+  })();
 
-// ── Detail-Panel ──────────────────────────────────────────────────────────
-function openDetailPanel(taskId) {
-  activeTaskId = taskId;
-  const task   = gantt.getTask(taskId);
-  if (!task) return;
-
-  document.getElementById('dp-title').textContent = task.text;
-  switchTab('info');
-  fillInfoTab(task);
-  fillEditTab(task);
-  loadComments(taskId);
-
-  document.getElementById('detail-panel').classList.add('open');
-}
-
-function closeDetailPanel() {
-  document.getElementById('detail-panel').classList.remove('open');
-  activeTaskId = null;
-}
-
-function switchTab(name) {
-  ['info','edit','comments'].forEach(t => {
-    document.getElementById('tab-' + t).classList.toggle('active', t === name);
-  });
-  document.querySelectorAll('.detail-tab').forEach((btn, i) => {
-    btn.classList.toggle('active', ['info','edit','comments'][i] === name);
-  });
-}
-
-function fillInfoTab(task) {
-  const pct = Math.round((task.progress ?? 0) * 100);
-  refreshInfoTab(task, pct);
-}
-
-function refreshInfoTab(task, pct) {
-  const statusMap = { Open:'Offen', InProgress:'In Arbeit', Done:'Abgeschlossen', Blocked:'Blockiert' };
-  const statusCls = { Open:'status-open', InProgress:'status-inprogress', Done:'status-done', Blocked:'status-blocked' };
-  const prioCls   = { High:'prio-high', Medium:'prio-medium', Low:'prio-low' };
-  const prioLabel = { High:'🔴 Hoch', Medium:'🟡 Mittel', Low:'🟢 Niedrig' };
-  const barColor  = pct >= 100 ? '#27AE60' : pct >= 50 ? '#F39C12' : '#2D9CDB';
-  const st  = task.status   ?? 'Open';
-  const pri = task.priority ?? 'Medium';
-
-  document.getElementById('dp-status').textContent   = statusMap[st] ?? st;
-  document.getElementById('dp-status').className     = 'badge ' + (statusCls[st] ?? '');
-  document.getElementById('dp-priority').textContent = prioLabel[pri] ?? pri;
-  document.getElementById('dp-priority').className   = 'badge ' + (prioCls[pri] ?? '');
-
-  const fmt = d => (d instanceof Date) ? d.toISOString().slice(0,10) : String(d??'').slice(0,10);
-  document.getElementById('dp-dates').textContent    = `${fmt(task.start_date)} – ${fmt(task.end_date)}`;
-  document.getElementById('dp-assignee').textContent = task.assigneeName ?? '—';
-  document.getElementById('dp-progress-bar').style.width      = pct + '%';
-  document.getElementById('dp-progress-bar').style.background = barColor;
-  document.getElementById('dp-progress-pct').textContent      = pct + '%';
-
-  const noteRow = document.getElementById('dp-note-row');
-  if (task.note) { noteRow.style.display = 'flex'; document.getElementById('dp-note').textContent = task.note; }
-  else           { noteRow.style.display = 'none'; }
-}
-
-function fillEditTab(task) {
-  const fmt = d => (d instanceof Date) ? d.toISOString().slice(0,10) : String(d??'').slice(0,10);
-  const pct = Math.round((task.progress ?? 0) * 100);
-
-  document.getElementById('et-id').value        = task.id;
-  document.getElementById('et-title').value     = task.text ?? '';
-  document.getElementById('et-start').value     = fmt(task.start_date);
-  document.getElementById('et-end').value       = fmt(task.end_date);
-  document.getElementById('et-progress').value  = pct;
-  document.getElementById('et-pct').textContent = pct + '%';
-  document.getElementById('et-status').value    = task.status   ?? 'Open';
-  document.getElementById('et-priority').value  = task.priority ?? 'Medium';
-  document.getElementById('et-milestone').value = task.type === 'milestone' ? 'true' : 'false';
-  document.getElementById('et-note').value      = task.note ?? '';
-  document.getElementById('msg-edit-task').textContent = '';
-
-  // FIX: Zuweisung mit aktuellen Projekt-Mitgliedern befüllen
-  setAssigneeSelected('et-assignee', task.assigneeId ?? '');
-}
-
-async function saveEditTask() {
-  const id          = document.getElementById('et-id').value;
-  const title       = document.getElementById('et-title').value.trim();
-  const start       = document.getElementById('et-start').value;
-  const end         = document.getElementById('et-end').value;
-  const progress    = parseInt(document.getElementById('et-progress').value);
-  const status      = document.getElementById('et-status').value;
-  const priority    = document.getElementById('et-priority').value;
-  const isMilestone = document.getElementById('et-milestone').value === 'true';
-  const assigneeId  = document.getElementById('et-assignee').value || '';
-  const note        = document.getElementById('et-note').value.trim();
-
-  if (!title || !start || !end) { document.getElementById('msg-edit-task').textContent = 'Bitte alle Pflichtfelder ausfüllen.'; return; }
-  if (end < start)              { document.getElementById('msg-edit-task').textContent = 'Enddatum muss nach Startdatum liegen.'; return; }
-
-  const task   = gantt.getTask(id);
-  const parent = task?.parent ? parseInt(task.parent) : null;
-
-  const res = await apiFetch(`/projects/${projectId}/tasks/${id}`, {
-    method:'PUT',
-    body: JSON.stringify({ title, startDate:start, endDate:end, progress, parentId:parent,
-                           status, priority, isMilestone, assigneeId, note })
-  });
-
-  if (res.ok) {
-    document.getElementById('msg-edit-task').textContent = '';
-    await loadGantt(); // FIX: suppress ist aktiv → kein versehentliches Löschen
-
-    document.getElementById('dp-title').textContent = title;
-    // FIX: nach reload korrekte Task-Daten aus Gantt lesen
-    const updatedTask = gantt.getTask(id);
-    if (updatedTask) fillInfoTab(updatedTask);
-  } else {
-    const err = await res.json().catch(() => ({}));
-    document.getElementById('msg-edit-task').textContent = err.error ?? err.title ?? 'Fehler beim Speichern.';
+  function openAddModal(milestone = false) {
+    addingMilestone = milestone;
+    document.getElementById('add-modal-title').textContent = milestone ? "Neuer Meilenstein" : "Neue Aufgabe";
+    openModal('modal-add-task');
   }
-}
 
-async function deleteTaskFromPanel() {
-  const id   = document.getElementById('et-id').value;
-  const task = gantt.getTask(id);
-  if (!confirm(`Aufgabe "${task?.text ?? id}" wirklich löschen?`)) return;
-  const res = await apiFetch(`/projects/${projectId}/tasks/${id}`, { method:'DELETE' });
-  if (res.ok || res.status === 204) {
-    closeDetailPanel();
-    suppressEvents = true;
-    gantt.deleteTask(id);
-    suppressEvents = false;
-  }
-}
+  function closeDetailPanel() { document.getElementById('detail-panel').classList.remove('open'); }
+  function switchTab(t) { /* Logik zum Umschalten der Tabs */ }
+  function logout() { clearToken(); window.location.href = '/index.html'; }
 
-// ── Kommentare ────────────────────────────────────────────────────────────
-async function loadComments(taskId) {
-  const list = document.getElementById('comment-list');
-  list.innerHTML = '<p style="font-size:.82rem;color:var(--gray-600)">Lädt…</p>';
-  try {
-    const res      = await apiFetch(`/projects/${projectId}/tasks/${taskId}/comments`);
-    const comments = await res.json();
-    if (!comments.length) { list.innerHTML = '<p class="no-comments">Noch keine Kommentare.</p>'; return; }
-    list.innerHTML = comments.map(c => `
-      <div class="comment-item">
-        <div class="comment-meta">
-          <span class="comment-author">${esc(c.authorName)}</span>
-          <span class="role-badge role-${(c.authorRole??'student').toLowerCase()}" style="font-size:.68em">${esc(c.authorRole)}</span>
-          <span>${new Date(c.createdAt).toLocaleString('de-AT')}</span>
-          ${c.authorId === currentUid || currentRole === 'Admin' || currentRole === 'Teacher'
-            ? `<button class="comment-delete" onclick="deleteComment(${taskId}, ${c.id})">🗑</button>` : ''}
-        </div>
-        <div class="comment-text">${esc(c.text)}</div>
-      </div>`).join('');
-  } catch { list.innerHTML = '<p class="no-comments">Fehler beim Laden.</p>'; }
-}
-
-async function submitComment() {
-  const input = document.getElementById('comment-input');
-  const text  = input.value.trim();
-  if (!text || !activeTaskId) return;
-  const res = await apiFetch(`/projects/${projectId}/tasks/${activeTaskId}/comments`, {
-    method:'POST', body: JSON.stringify({ text })
-  });
-  if (res.ok) { input.value = ''; await loadComments(activeTaskId); }
-}
-
-async function deleteComment(taskId, commentId) {
-  if (!confirm('Kommentar löschen?')) return;
-  const res = await apiFetch(`/projects/${projectId}/tasks/${taskId}/comments/${commentId}`, { method:'DELETE' });
-  if (res.ok || res.status === 204) await loadComments(taskId);
-}
-
-function logout() { clearToken(); window.location.href = '/index.html'; }
-
-// ── Export-Funktionen ─────────────────────────────────────────────────────
-function exportGanttExcel() {
-  const a = document.createElement('a');
-  a.href = `/api/export/excel/${projectId}?token=${encodeURIComponent(getToken())}`;
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-function exportGanttPdf() {
-  const a = document.createElement('a');
-  a.href = `/api/export/pdf/${projectId}?token=${encodeURIComponent(getToken())}`;
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-document.querySelectorAll('.modal-overlay').forEach(o =>
-  o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); }));
-
-document.getElementById('comment-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); }
-});
-
-const today = new Date().toISOString().slice(0,10);
-document.getElementById('t-start').value = today;
-document.getElementById('t-end').value   = today;
-
-// FIX: erst Projekt-Mitglieder laden, dann Gantt
-loadProjectMembers().then(() => loadGantt());
+  // Start
+  loadGantt();
 </script>
 </body>
 </html>
