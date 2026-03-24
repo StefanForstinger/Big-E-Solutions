@@ -162,7 +162,7 @@ public class AuthController : ControllerBase
             PrivacyAccepted    = false
         };
 
-        const string defaultPassword = "Schule2024!";
+        var defaultPassword = "Schule" + DateTime.Now.Year + "!";
         var result = await _userManager.CreateAsync(user, defaultPassword);
         if (!result.Succeeded) return BadRequest(result.Errors);
 
