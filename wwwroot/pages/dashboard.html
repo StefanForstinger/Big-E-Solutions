@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" type="image/png" href="/favicon.png">
   <style>
+    /* UI & Layout */
     .role-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:.76em; font-weight:700; letter-spacing:.02em; }
     .role-admin   { background:#fee2e2; color:#b91c1c; }
     .role-teacher { background:#fef3c7; color:#92400e; }
@@ -19,8 +20,16 @@
     .panel-toggle:hover { background:var(--gray-200); }
     .panel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.2rem; }
 
-    .admin-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); border-left:4px solid var(--red); overflow:hidden; transition:box-shadow var(--trans),transform var(--trans); }
-    .admin-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
+    /* Modals */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+    .modal-overlay.open { display: flex; }
+    .alert-hidden { display: none; }
+
+    /* Cards */
+    .admin-card, .assign-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); border-left:4px solid var(--red); overflow:hidden; transition:box-shadow var(--trans),transform var(--trans); }
+    .assign-card { border-left-color: var(--green); padding: 1.2rem; display: flex; flex-direction: column; gap: .5rem; }
+    .admin-card:hover, .assign-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
+
     .admin-card-header { display:flex; align-items:center; justify-content:space-between; padding:.9rem 1.1rem .6rem; }
     .admin-card-header h3 { font-size:.95rem; color:var(--navy); }
     .admin-card-body { padding:0 1.1rem .8rem; }
@@ -29,554 +38,355 @@
     .admin-card-footer { padding:.7rem 1.1rem; border-top:1px solid var(--gray-200); display:flex; align-items:center; gap:.5rem; }
     .admin-card-footer label { font-size:.8rem; font-weight:600; color:var(--gray-600); white-space:nowrap; }
     .admin-card-footer select { flex:1; padding:4px 8px; border-radius:6px; border:1.5px solid var(--gray-400); font-size:.85rem; }
-    .admin-card-footer select:disabled { opacity:.5; cursor:not-allowed; }
 
-    .assign-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); border-left:4px solid var(--green); padding:1.2rem; display:flex; flex-direction:column; gap:.5rem; transition:box-shadow var(--trans),transform var(--trans); }
-    .assign-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
-    .assign-card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem; }
-    .assign-card-header h3 { font-size:1rem; color:var(--navy); }
-    .assign-meta { font-size:.82rem; color:var(--gray-600); }
     .chip-list { display:flex; flex-wrap:wrap; gap:.35rem; min-height:26px; }
     .chip { display:inline-flex; align-items:center; gap:.3rem; background:#dbeafe; color:#1e40af; border-radius:20px; padding:2px 8px 2px 10px; font-size:.78rem; font-weight:600; }
     .chip-btn { background:none; border:none; cursor:pointer; color:#3b82f6; font-size:.85rem; line-height:1; padding:0 1px; }
     .chip-btn:hover { color:#b91c1c; }
-    .chip-empty { font-size:.82rem; color:var(--gray-600); font-style:italic; }
     .assign-add { display:flex; gap:.5rem; align-items:center; margin-top:.2rem; border-top:1px solid var(--gray-200); padding-top:.75rem; }
-    .assign-add select { flex:1; font-size:.85rem; padding:.38rem .6rem; border-radius:6px; border:1.5px solid var(--gray-400); }
-    .assign-add select:focus { border-color:var(--green); outline:none; box-shadow:0 0 0 3px rgba(39,174,96,.15); }
-    .btn-add-student { padding:.38rem .85rem; background:var(--green); color:var(--white); border:none; border-radius:6px; font-size:.82rem; font-weight:700; cursor:pointer; white-space:nowrap; transition:background var(--trans); }
-    .btn-add-student:hover { background:#1e8449; }
-    .assign-msg { font-size:.8rem; min-height:1em; }
-    .assign-msg.ok  { color:#15803d; }
-    .assign-msg.err { color:#b91c1c; }
+    .btn-add-student { padding:.38rem .85rem; background:var(--green); color:var(--white); border:none; border-radius:6px; font-size:.82rem; font-weight:700; cursor:pointer; }
 
     .progress-bar-wrap { background:var(--gray-200); border-radius:20px; height:6px; overflow:hidden; margin-top:.3rem; }
     .progress-bar-fill { height:100%; border-radius:20px; transition:width .4s ease; }
 
     .color-swatches { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.35rem; }
     .swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:border-color .15s,transform .15s; }
-    .swatch:hover { transform:scale(1.15); }
     .swatch.selected { border-color:var(--navy); }
 
-    .page-wrapper {
-      padding-bottom: 3rem;
-    }
+    .page-wrapper { padding-bottom: 5rem; }
+    .auth-footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: .75rem 1rem; font-size: .8rem; color: rgba(255,255,255,.45); background: #1E3A5F; z-index: 100; }
+    .auth-footer a { color: rgba(255,255,255,.65); text-decoration: none; font-weight: 600; }
+    .auth-footer .sep { margin: 0 .5rem; opacity: .4; }
   </style>
 </head>
 <body>
-  <nav class="navbar">
-    <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
-    <div class="navbar-right">
-      <div id="admin-nav-link" style="display: none; margin-right: 1rem;">
-        <a href="/pages/user-management.html" class="btn btn-outline btn-sm">👥 Benutzer</a>
-      </div>
-      <span class="navbar-user" id="nav-user"></span>
-      <span class="role-badge" id="nav-role"></span>
-      <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
+<nav class="navbar">
+  <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
+  <div class="navbar-right">
+    <div id="admin-nav-link" style="display: none; margin-right: 1rem;">
+      <a href="/pages/user-management.html" class="btn btn-outline btn-sm">👥 Benutzer</a>
     </div>
-  </nav>
+    <span class="navbar-user" id="nav-user"></span>
+    <span class="role-badge" id="nav-role"></span>
+    <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
+  </div>
+</nav>
 
-  <div class="page-wrapper">
-
-    <!-- Admin Panel -->
-    <div id="admin-panel" class="panel-section" style="display:none">
-      <div class="panel-section-title">
-        <h2>👑 Benutzerverwaltung</h2>
-        <button class="panel-toggle" onclick="toggleSection('admin-grid')">Ein-/Ausblenden</button>
-      </div>
-      <div id="admin-grid" class="panel-grid">
-        <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⏳</div><p>Wird geladen…</p></div>
-      </div>
+<div class="page-wrapper">
+  <div id="admin-panel" class="panel-section" style="display:none">
+    <div class="panel-section-title">
+      <h2>👑 Benutzerverwaltung</h2>
+      <button class="panel-toggle" onclick="toggleSection('admin-grid')">Ein-/Ausblenden</button>
     </div>
-
-    <!-- Teacher Panel -->
-    <div id="teacher-panel" class="panel-section" style="display:none">
-      <div class="panel-section-title">
-        <h2>🎓 Schüler zu Projekten zuweisen</h2>
-        <button class="panel-toggle" onclick="toggleSection('assign-grid')">Ein-/Ausblenden</button>
-      </div>
-      <div id="assign-grid" class="panel-grid">
-        <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⏳</div><p>Wird geladen…</p></div>
-      </div>
-    </div>
-
-    <!-- Projekte -->
-    <div class="page-header">
-      <div>
-        <h1 id="page-title">Meine Projekte</h1>
-        <p class="text-muted mt-1" id="page-sub">Verwalte deine Projekte und Aufgaben</p>
-      </div>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-        <button class="btn btn-ghost btn-sm" onclick="exportAllExcel()" title="Alle Projekte als Excel exportieren">Excel Export</button> 
-        <button class="btn btn-ghost btn-sm" onclick="exportAllPdf()" title="Alle Projekte als PDF exportieren">PDF Export</button>
-        <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>
-      </div>
-    </div>
-    <div id="project-grid" class="project-grid">
-      <div class="empty-state"><div class="empty-icon">⏳</div><p>Wird geladen…</p></div>
-    </div>
+    <div id="admin-grid" class="panel-grid"></div>
   </div>
 
-  <!-- Modal: Neues Projekt -->
-  <div id="modal-new-project" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Neues Projekt erstellen</h2>
-        <button class="modal-close" onclick="closeModal('modal-new-project')">✕</button>
-      </div>
-      <div class="form-group">
-        <label for="p-name">Projektname *</label>
-        <input id="p-name" type="text" placeholder="z.B. Webshop Redesign">
-      </div>
-      <div class="form-group">
-        <label for="p-desc">Beschreibung</label>
-        <textarea id="p-desc" placeholder="Kurze Projektbeschreibung…"></textarea>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label for="p-start">Startdatum *</label><input id="p-start" type="date"></div>
-        <div class="form-group"><label for="p-end">Enddatum *</label><input id="p-end" type="date"></div>
-      </div>
-      <div class="form-group">
-        <label>Projektfarbe</label>
-        <div class="color-swatches" id="new-swatches"></div>
-        <input type="hidden" id="p-color" value="#2D9CDB">
-      </div>
-      <div id="msg-new-project" class="alert alert-hidden"></div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeModal('modal-new-project')">Abbrechen</button>
-        <button id="btn-create" class="btn btn-primary" onclick="createProject()">Projekt erstellen</button>
-      </div>
+  <div id="teacher-panel" class="panel-section" style="display:none">
+    <div class="panel-section-title">
+      <h2>🎓 Schüler zu Projekten zuweisen</h2>
+      <button class="panel-toggle" onclick="toggleSection('assign-grid')">Ein-/Ausblenden</button>
     </div>
+    <div id="assign-grid" class="panel-grid"></div>
   </div>
 
-  <!-- Modal: Projekt bearbeiten -->
-  <div id="modal-edit-project" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Projekt bearbeiten</h2>
-        <button class="modal-close" onclick="closeModal('modal-edit-project')">✕</button>
-      </div>
-      <input type="hidden" id="edit-id">
-      <div class="form-group"><label for="edit-name">Projektname *</label><input id="edit-name" type="text"></div>
-      <div class="form-group"><label for="edit-desc">Beschreibung</label><textarea id="edit-desc"></textarea></div>
-      <div class="form-row">
-        <div class="form-group"><label for="edit-start">Startdatum *</label><input id="edit-start" type="date"></div>
-        <div class="form-group"><label for="edit-end">Enddatum *</label><input id="edit-end" type="date"></div>
-      </div>
-      <div class="form-group">
-        <label>Projektfarbe</label>
-        <div class="color-swatches" id="edit-swatches"></div>
-        <input type="hidden" id="edit-color" value="#2D9CDB">
-      </div>
-      <div id="msg-edit-project" class="alert alert-hidden"></div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeModal('modal-edit-project')">Abbrechen</button>
-        <button id="btn-save-edit" class="btn btn-primary" onclick="saveEdit()">Speichern</button>
-      </div>
+  <div class="page-header">
+    <div>
+      <h1 id="page-title">Meine Projekte</h1>
+      <p class="text-muted mt-1" id="page-sub">Verwalte deine Projekte und Aufgaben</p>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-ghost btn-sm" onclick="exportAllExcel()">Alle Excel</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportAllPdf()">Alle PDF</button>
+      <button id="btn-new-project" class="btn btn-primary" onclick="openModal('modal-new-project')">+ Neues Projekt</button>
     </div>
   </div>
+  <div id="project-grid" class="project-grid"></div>
+</div>
 
-  <script src="/js/api.js"></script>
-  <script>
-    if (!isLoggedIn()) window.location.href = '/index.html';
+<div id="modal-new-project" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Neues Projekt erstellen</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-project')">✕</button>
+    </div>
+    <div class="form-group">
+      <label for="p-name">Projektname *</label>
+      <input id="p-name" type="text">
+    </div>
+    <div class="form-group">
+      <label for="p-desc">Beschreibung</label>
+      <textarea id="p-desc"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Startdatum *</label><input id="p-start" type="date"></div>
+      <div class="form-group"><label>Enddatum *</label><input id="p-end" type="date"></div>
+    </div>
+    <div class="form-group">
+      <label>Projektfarbe</label>
+      <div class="color-swatches" id="new-swatches"></div>
+      <input type="hidden" id="p-color" value="#2D9CDB">
+    </div>
+    <div id="msg-new-project" class="alert alert-hidden"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-project')">Abbrechen</button>
+      <button id="btn-create" class="btn btn-primary" onclick="createProject()">Erstellen</button>
+    </div>
+  </div>
+</div>
 
-    const currentRole = getUserRole();
-    const currentUser = getUser();
+<div id="modal-edit-project" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Projekt bearbeiten</h2>
+      <button class="modal-close" onclick="closeModal('modal-edit-project')">✕</button>
+    </div>
+    <input type="hidden" id="edit-id">
+    <div class="form-group"><label>Projektname *</label><input id="edit-name" type="text"></div>
+    <div class="form-group"><label>Beschreibung</label><textarea id="edit-desc"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Startdatum *</label><input id="edit-start" type="date"></div>
+      <div class="form-group"><label>Enddatum *</label><input id="edit-end" type="date"></div>
+    </div>
+    <div class="form-group">
+      <label>Projektfarbe</label>
+      <div class="color-swatches" id="edit-swatches"></div>
+      <input type="hidden" id="edit-color" value="#2D9CDB">
+    </div>
+    <div id="msg-edit-project" class="alert alert-hidden"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-project')">Abbrechen</button>
+      <button id="btn-save-edit" class="btn btn-primary" onclick="saveEdit()">Speichern</button>
+    </div>
+  </div>
+</div>
 
-    document.getElementById('nav-user').textContent = getUserName();
-    const roleEl = document.getElementById('nav-role');
-    roleEl.textContent = currentRole;
-    roleEl.className = 'role-badge role-' + currentRole.toLowerCase();
+<footer class="auth-footer">
+  © 2025 Projektplaner · <a href="/pages/impressum.html">Impressum</a> · <a href="/pages/datenschutz.html">Datenschutz</a>
+</footer>
 
-    // Lehrer dürfen keine Projekte erstellen
-    if (currentRole === 'Teacher') {
-      document.getElementById('btn-new-project').style.display = 'none';
-    }
-    if (currentRole === 'Student') {
-      document.getElementById('page-sub').textContent = 'Hier siehst du deine zugewiesenen Projekte';
-    }
-    if (currentRole === 'Admin') {
-      document.getElementById('admin-panel').style.display = 'block';
-      document.getElementById('admin-nav-link').style.display = 'block';
-      loadAdminPanel();
-    }
-    if (currentRole === 'Teacher' || currentRole === 'Admin') {
-      document.getElementById('teacher-panel').style.display = 'block';
-      loadTeacherPanel();
-    }
+<script src="/js/api.js"></script>
+<script>
+  /* --- Logic & Auth --- */
+  if (!isLoggedIn()) window.location.href = '/index.html';
+  const currentRole = getUserRole();
+  const currentUser = getUser();
+  let allStudents = [];
+  let allProjects = [];
 
-    // ── Farben ─────────────────────────────────────────────────────────────
-    const PROJECT_COLORS = ['#2D9CDB','#27AE60','#E74C3C','#F39C12','#8E44AD','#1E3A5F','#16A085','#D35400'];
+  document.getElementById('nav-user').textContent = getUserName();
+  const roleEl = document.getElementById('nav-role');
+  roleEl.textContent = currentRole;
+  roleEl.className = 'role-badge role-' + currentRole.toLowerCase();
 
-    function buildSwatches(containerId, hiddenId, selectedColor) {
-      const norm = (selectedColor || '#2D9CDB').toUpperCase();
-      const cont = document.getElementById(containerId);
-      cont.innerHTML = PROJECT_COLORS.map(c => `
+  if (currentRole === 'Teacher') document.getElementById('btn-new-project').style.display = 'none';
+  if (currentRole === 'Admin') {
+    document.getElementById('admin-panel').style.display = 'block';
+    document.getElementById('admin-nav-link').style.display = 'block';
+    loadAdminPanel();
+  }
+  if (currentRole === 'Teacher' || currentRole === 'Admin') {
+    document.getElementById('teacher-panel').style.display = 'block';
+    loadTeacherPanel();
+  }
+
+  const PROJECT_COLORS = ['#2D9CDB','#27AE60','#E74C3C','#F39C12','#8E44AD','#1E3A5F','#16A085','#D35400'];
+
+  function buildSwatches(containerId, hiddenId, selectedColor) {
+    const norm = (selectedColor || '#2D9CDB').toUpperCase();
+    const cont = document.getElementById(containerId);
+    cont.innerHTML = PROJECT_COLORS.map(c => `
         <div class="swatch ${c.toUpperCase() === norm ? 'selected' : ''}"
-             style="background:${c}"
-             data-color="${c}"
+             style="background:${c}" data-color="${c}"
              onclick="selectColor('${containerId}','${hiddenId}','${c}')"></div>
       `).join('');
-      document.getElementById(hiddenId).value = selectedColor || '#2D9CDB';
-    }
-    function selectColor(containerId, hiddenId, color) {
-      document.getElementById(hiddenId).value = color;
-      // FIX: Vergleich über data-color Attribut statt style.background (Browser normalisieren zu rgb())
-      document.getElementById(containerId).querySelectorAll('.swatch')
-        .forEach(s => s.classList.toggle('selected', s.dataset.color === color));
-    }
-    buildSwatches('new-swatches',  'p-color',    '#2D9CDB');
-    buildSwatches('edit-swatches', 'edit-color', '#2D9CDB');
+    document.getElementById(hiddenId).value = selectedColor || '#2D9CDB';
+  }
 
-    function toggleSection(gridId) {
-      const el = document.getElementById(gridId);
-      el.style.display = el.style.display === 'none' ? 'grid' : 'none';
-    }
+  function selectColor(containerId, hiddenId, color) {
+    document.getElementById(hiddenId).value = color;
+    document.getElementById(containerId).querySelectorAll('.swatch')
+            .forEach(s => s.classList.toggle('selected', s.dataset.color === color));
+  }
+  buildSwatches('new-swatches', 'p-color', '#2D9CDB');
+  buildSwatches('edit-swatches', 'edit-color', '#2D9CDB');
 
-    let allStudents = [];
-    let allProjects = [];
-
-    // ── Admin Panel ─────────────────────────────────────────────────────────
-    async function loadAdminPanel() {
-      const grid = document.getElementById('admin-grid');
-      try {
-        const res   = await apiFetch('/auth/getAll');
-        const users = await res.json();
-        if (!users.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Keine Benutzer.</p></div>'; return; }
-        grid.innerHTML = users.map(u => `
+  /* --- Data Loading --- */
+  async function loadAdminPanel() {
+    const grid = document.getElementById('admin-grid');
+    try {
+      const res = await apiFetch('/auth/getAll');
+      const users = await res.json();
+      grid.innerHTML = users.map(u => `
           <div class="admin-card">
-            <div class="admin-card-header">
-              <h3>${esc(u.fullName)}</h3>
-              <span class="role-badge role-${u.role.toLowerCase()}">${esc(u.role)}</span>
-            </div>
-            <div class="admin-card-body">
-              <div class="admin-card-row">✉️ <span>${esc(u.email)}</span></div>
-            </div>
+            <div class="admin-card-header"><h3>${esc(u.fullName)}</h3><span class="role-badge role-${u.role.toLowerCase()}">${esc(u.role)}</span></div>
+            <div class="admin-card-body"><div class="admin-card-row">✉️ <span>${esc(u.email)}</span></div></div>
             <div class="admin-card-footer">
               <label>Rolle:</label>
-              <select onchange="changeRole('${esc(u.id)}', this)"
-              ${(u.id === currentUser?.nameid || u.role === 'Admin')
-                ? 'disabled title="Admin kann nicht geändert werden"'
-                : ''}>
+              <select onchange="changeRole('${u.id}', this)" ${u.id === currentUser?.nameid || u.role === 'Admin' ? 'disabled' : ''}>
                 <option value="Student" ${u.role==='Student'?'selected':''}>Student</option>
                 <option value="Teacher" ${u.role==='Teacher'?'selected':''}>Teacher</option>
-                <option value="Admin"   ${u.role==='Admin'  ?'selected':''}>Admin</option>
+                <option value="Admin" ${u.role==='Admin'?'selected':''}>Admin</option>
               </select>
             </div>
           </div>`).join('');
-      } catch { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Fehler beim Laden.</p></div>'; }
-    }
+    } catch { grid.innerHTML = '<p>Fehler.</p>'; }
+  }
 
-    async function changeRole(userId, selectEl) {
-      const newRole = selectEl.value;
-      selectEl.disabled = true;
-      try {
-        const res = await apiFetch('/auth/setRole', { method:'PUT', body: JSON.stringify({ userId, role: newRole }) });
-        if (res.ok) await loadAdminPanel();
-        else { const e = await res.json(); alert('Fehler: ' + (e.error ?? 'Unbekannt')); await loadAdminPanel(); }
-      } catch { alert('Serverfehler.'); await loadAdminPanel(); }
-    }
+  async function loadTeacherPanel() {
+    const grid = document.getElementById('assign-grid');
+    try {
+      const [projRes, userRes] = await Promise.all([apiFetch('/project'), apiFetch('/auth/getAll')]);
+      allProjects = await projRes.json();
+      allStudents = (await userRes.json()).filter(u => u.role === 'Student');
+      renderAssignGrid();
+    } catch { grid.innerHTML = '<p>Fehler.</p>'; }
+  }
 
-    // ── Teacher Panel ───────────────────────────────────────────────────────
-    async function loadTeacherPanel() {
-      const grid = document.getElementById('assign-grid');
-      try {
-        const [projRes, userRes] = await Promise.all([apiFetch('/project'), apiFetch('/auth/getAll')]);
-        allProjects = await projRes.json();
-        const allUsers = await userRes.json();
-        allStudents = allUsers.filter(u => u.role === 'Student');
-        renderAssignGrid();
-      } catch { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Fehler beim Laden.</p></div>'; }
-    }
-
-    function renderAssignGrid() {
-      const grid = document.getElementById('assign-grid');
-      if (!allProjects.length) {
-        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📋</div><p>Noch keine Projekte.</p></div>';
-        return;
-      }
-      grid.innerHTML = allProjects.map(p => {
-        const members     = p.members ?? [];
-        const assignedIds = new Set(members.map(m => m.userId));
-        const available   = allStudents.filter(s => !assignedIds.has(s.id));
-        const chips = members.length
-          ? members.map(m => `<span class="chip">👤 ${esc(m.fullName)}<button class="chip-btn" onclick="removeMember(${p.id},'${esc(m.userId)}')">✕</button></span>`).join('')
-          : '<span class="chip-empty">Noch keine Schüler</span>';
-        const opts = available.length
-          ? available.map(s => `<option value="${esc(s.id)}">${esc(s.fullName)}</option>`).join('')
-          : '<option value="" disabled>Alle zugewiesen</option>';
-        return `
+  function renderAssignGrid() {
+    const grid = document.getElementById('assign-grid');
+    grid.innerHTML = allProjects.map(p => {
+      const members = p.members ?? [];
+      const assignedIds = new Set(members.map(m => m.userId));
+      const available = allStudents.filter(s => !assignedIds.has(s.id));
+      const chips = members.map(m => `<span class="chip">👤 ${esc(m.fullName)}<button class="chip-btn" onclick="removeMember(${p.id},'${m.userId}')">✕</button></span>`).join('') || '<span class="chip-empty">Leer</span>';
+      const opts = available.map(s => `<option value="${s.id}">${esc(s.fullName)}</option>`).join('') || '<option disabled>Alle zugewiesen</option>';
+      return `
           <div class="assign-card">
-            <div class="assign-card-header">
-              <h3>${esc(p.name)}</h3>
-              <span class="badge badge-blue">${(p.tasks??[]).length} Aufgaben</span>
-            </div>
-            <div class="assign-meta">📅 ${p.startDate?.slice(0,10)} – ${p.endDate?.slice(0,10)}</div>
-            ${p.owner ? `<div class="assign-meta">👤 ${esc(p.owner.fullName)}</div>` : ''}
+            <div class="assign-card-header"><h3>${esc(p.name)}</h3></div>
             <div class="chip-list">${chips}</div>
             <div class="assign-add">
-              <select id="sel-${p.id}"><option value="">— Schüler wählen —</option>${opts}</select>
-              <button class="btn-add-student" onclick="addMember(${p.id})">+ Hinzufügen</button>
-            </div>
-            <div class="assign-msg" id="msg-assign-${p.id}"></div>
-          </div>`;
-      }).join('');
-    }
-
-    async function addMember(projectId) {
-      const sel = document.getElementById(`sel-${projectId}`);
-      const userId = sel.value;
-      if (!userId) { showAssignMsg(projectId, 'Bitte einen Schüler wählen.', 'err'); return; }
-      sel.disabled = true;
-      try {
-        const res  = await apiFetch(`/project/${projectId}/members`, { method:'POST', body: JSON.stringify({ userId }) });
-        const data = await res.json();
-        if (res.ok) {
-          showAssignMsg(projectId, `✓ ${data.fullName} hinzugefügt.`, 'ok');
-          const proj = allProjects.find(p => p.id === projectId);
-          if (proj) { proj.members = proj.members ?? []; const s = allStudents.find(x => x.id === userId); if(s) proj.members.push({ userId, fullName: s.fullName }); }
-          renderAssignGrid();
-          setTimeout(() => showAssignMsg(projectId, '', ''), 3000);
-        } else { showAssignMsg(projectId, data.error ?? 'Fehler.', 'err'); sel.disabled = false; }
-      } catch { showAssignMsg(projectId, 'Serverfehler.', 'err'); sel.disabled = false; }
-    }
-
-    async function removeMember(projectId, userId) {
-      const s = allStudents.find(x => x.id === userId);
-      if (!confirm(`${s?.fullName ?? 'Schüler'} entfernen?`)) return;
-      const res = await apiFetch(`/project/${projectId}/members/${userId}`, { method:'DELETE' });
-      if (res.ok || res.status === 204) {
-        const proj = allProjects.find(p => p.id === projectId);
-        if (proj) proj.members = (proj.members ?? []).filter(m => m.userId !== userId);
-        renderAssignGrid();
-      }
-    }
-
-    function showAssignMsg(projectId, text, type) {
-      const el = document.getElementById(`msg-assign-${projectId}`);
-      if (el) { el.textContent = text; el.className = 'assign-msg ' + (type ?? ''); }
-    }
-
-    // ── Projekte laden ──────────────────────────────────────────────────────
-    async function loadProjects() {
-      try {
-        const res  = await apiFetch('/project');
-        const data = await res.json();
-        allProjects = data; // auch für Teacher-Panel aktuell halten
-        renderProjects(data);
-      } catch(e) { if (e.message !== 'Nicht eingeloggt') renderProjectError(); }
-    }
-
-    function renderProjects(projects) {
-      const grid = document.getElementById('project-grid');
-      if (!projects.length) {
-        grid.innerHTML = currentRole === 'Student'
-          ? '<div class="empty-state"><div class="empty-icon">📋</div><p>Dir wurden noch keine Projekte zugewiesen.</p></div>'
-          : `<div class="empty-state"><div class="empty-icon">📋</div><p>Noch keine Projekte.</p>
-              <button class="btn btn-primary mt-2" onclick="openModal('modal-new-project')">Erstes Projekt erstellen</button></div>`;
-        return;
-      }
-
-      grid.innerHTML = projects.map(p => {
-        const taskCount   = (p.tasks ?? []).length;
-        const progress    = p.progress ?? 0;
-        const start       = p.startDate?.slice(0,10) ?? '';
-        const end         = p.endDate?.slice(0,10)   ?? '';
-        const color       = p.color ?? '#2D9CDB';
-        const memberCount = (p.members ?? []).length;
-
-        // FIX: Lehrer dürfen NICHT bearbeiten
-        const canEdit   = (p.ownerId === currentUser?.nameid || currentRole === 'Admin') && currentRole !== 'Teacher';
-        const canDelete = p.ownerId === currentUser?.nameid || currentRole === 'Admin';
-
-        const barColor = progress >= 100 ? '#27AE60' : progress >= 50 ? '#F39C12' : '#2D9CDB';
-
-        // FIX: Projekt-Daten sicher als data-Attribute speichern statt inline-onclick mit JSON
-        const cardId = `proj-${p.id}`;
-        return `
-          <div class="project-card" id="${cardId}" style="border-left-color:${color}"
-               data-id="${p.id}"
-               data-name="${esc(p.name)}"
-               data-desc="${esc(p.description ?? '')}"
-               data-start="${start}"
-               data-end="${end}"
-               data-color="${color}">
-            <div class="project-card-header">
-              <h3>${esc(p.name)}</h3>
-              <span class="badge badge-blue">${taskCount} Aufgaben</span>
-            </div>
-            <p class="project-desc">${esc(p.description) || '<em>Keine Beschreibung</em>'}</p>
-            <p class="project-dates">📅 ${start} – ${end}</p>
-            ${p.owner ? `<p class="project-owner">👤 ${esc(p.owner.fullName)}</p>` : ''}
-            ${memberCount ? `<p class="project-owner">🎓 ${memberCount} Schüler zugewiesen</p>` : ''}
-            <div style="margin-top:.3rem">
-              <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--gray-600);margin-bottom:.25rem">
-                <span>Fortschritt</span><span>${progress}%</span>
-              </div>
-              <div class="progress-bar-wrap">
-                <div class="progress-bar-fill" style="width:${progress}%;background:${barColor}"></div>
-              </div>
-            </div>
-            <div class="project-actions" style="margin-top:.6rem">
-              <button class="btn btn-primary btn-sm" onclick="openGantt(${p.id})">📊 Gantt</button>
-              <button class="btn btn-ghost btn-sm" onclick="exportProjectExcel(${p.id})" title="Als Excel exportieren">📊 XLS</button>
-              <button class="btn btn-ghost btn-sm" onclick="exportProjectPdf(${p.id})" title="Als PDF exportieren">📄 PDF</button>
-              ${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="openEdit(${p.id}, ${JSON.stringify(p.name)}, ${JSON.stringify(p.description)}, '${start}', '${end}', '${color}')">✏️ Bearbeiten</button>` : ''}
-              ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id}, ${JSON.stringify(p.name)})">🗑</button>` : ''}
+              <select id="sel-${p.id}"><option value="">— Wählen —</option>${opts}</select>
+              <button class="btn-add-student" onclick="addMember(${p.id})">+ Add</button>
             </div>
           </div>`;
-      }).join('');
+    }).join('');
+  }
+
+  async function loadProjects() {
+    try {
+      const res = await apiFetch('/project');
+      allProjects = await res.json();
+      renderProjects(allProjects);
+    } catch { document.getElementById('project-grid').innerHTML = '<p>Fehler.</p>'; }
+  }
+
+  function renderProjects(projects) {
+    const grid = document.getElementById('project-grid');
+    grid.innerHTML = projects.map(p => {
+      const start = p.startDate?.slice(0,10) ?? '';
+      const end = p.endDate?.slice(0,10) ?? '';
+      const canManage = (p.ownerId === currentUser?.nameid || currentRole === 'Admin');
+
+      return `
+      <div class="project-card" id="proj-${p.id}" 
+           style="border-left: 4px solid ${p.color}; padding: 1.2rem; position: relative;"
+           data-id="${p.id}" data-name="${esc(p.name)}" data-desc="${esc(p.description ?? '')}" 
+           data-start="${start}" data-end="${end}" data-color="${p.color}">
+        
+        ${canManage ? `
+          <button class="btn btn-danger btn-sm" 
+                  style="position: absolute; top: 1rem; right: 1rem; padding: 4px 8px; z-index: 10;" 
+                  onclick="deleteProject(${p.id})">
+            🗑
+          </button>` : ''}
+
+        <div class="project-card-header" style="padding-right: 2.5rem;">
+          <h3>${esc(p.name)}</h3>
+        </div>
+        
+        <p class="project-desc">${esc(p.description) || '<em>Keine Beschreibung</em>'}</p>
+        <p class="project-dates">📅 ${start} – ${end}</p>
+        
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" style="width:${p.progress ?? 0}%; background:${p.color}"></div>
+        </div>
+
+        <div class="project-actions" style="margin-top: 1.2rem; display: flex; align-items: center; gap: 0.4rem;">
+          <button class="btn btn-primary btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openGantt(${p.id})">📊 Gantt</button>
+          <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="exportProjectExcel(${p.id})">📊 XLS</button>
+          <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="exportProjectPdf(${p.id})">📄 PDF</button>
+          ${canManage ? `<button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openEdit(${p.id})">✏️ Edit</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /* --- Actions --- */
+  async function addMember(projectId) {
+    const sel = document.getElementById(`sel-${projectId}`);
+    if(!sel.value) return;
+    const res = await apiFetch(`/project/${projectId}/members`, { method:'POST', body: JSON.stringify({ userId: sel.value }) });
+    if (res.ok) { loadTeacherPanel(); loadProjects(); }
+  }
+
+  async function removeMember(projectId, userId) {
+    const res = await apiFetch(`/project/${projectId}/members/${userId}`, { method:'DELETE' });
+    if (res.ok) { loadTeacherPanel(); loadProjects(); }
+  }
+
+  async function changeRole(userId, select) {
+    const res = await apiFetch('/auth/setRole', { method:'PUT', body: JSON.stringify({ userId, role: select.value }) });
+    if (res.ok) loadAdminPanel();
+  }
+
+  async function createProject() {
+    const body = {
+      name: document.getElementById('p-name').value,
+      description: document.getElementById('p-desc').value,
+      startDate: document.getElementById('p-start').value,
+      endDate: document.getElementById('p-end').value,
+      color: document.getElementById('p-color').value
+    };
+    const res = await apiFetch('/project', { method:'POST', body: JSON.stringify(body) });
+    if (res.ok) { closeModal('modal-new-project'); loadProjects(); loadTeacherPanel(); }
+  }
+
+  async function saveEdit() {
+    const id = document.getElementById('edit-id').value;
+    const body = {
+      name: document.getElementById('edit-name').value,
+      description: document.getElementById('edit-desc').value,
+      startDate: document.getElementById('edit-start').value,
+      endDate: document.getElementById('edit-end').value,
+      color: document.getElementById('edit-color').value
+    };
+    const res = await apiFetch(`/project/${id}`, { method:'PUT', body: JSON.stringify(body) });
+    if (res.ok) { closeModal('modal-edit-project'); loadProjects(); }
+  }
+
+  async function deleteProject(id) {
+    if(confirm("Projekt löschen?")) {
+      await apiFetch(`/project/${id}`, { method:'DELETE' });
+      loadProjects(); loadTeacherPanel();
     }
+  }
 
-    function renderProjectError() {
-      document.getElementById('project-grid').innerHTML =
-        '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Fehler beim Laden.</p><button class="btn btn-ghost mt-2" onclick="loadProjects()">Erneut</button></div>';
-    }
+  /* --- Exports --- */
+  function exportProjectExcel(id) { window.location.href = `/api/export/excel/${id}?token=${getToken()}`; }
+  function exportProjectPdf(id) { window.location.href = `/api/export/pdf/${id}?token=${getToken()}`; }
+  function exportAllExcel() { window.location.href = `/api/export/excel?token=${getToken()}`; }
+  function exportAllPdf() { window.location.href = `/api/export/pdf?token=${getToken()}`; }
 
-    // FIX: openEdit liest Daten sicher aus data-Attributen statt aus inline-onclick-Parametern
-    function openEditById(id) {
-      const card = document.getElementById(`proj-${id}`);
-      if (!card) return;
-      document.getElementById('edit-id').value    = card.dataset.id;
-      document.getElementById('edit-name').value  = card.dataset.name;
-      document.getElementById('edit-desc').value  = card.dataset.desc;
-      document.getElementById('edit-start').value = card.dataset.start;
-      document.getElementById('edit-end').value   = card.dataset.end;
-      buildSwatches('edit-swatches','edit-color', card.dataset.color || '#2D9CDB');
-      hideAlert('msg-edit-project');
-      openModal('modal-edit-project');
-    }
+  /* --- Helpers --- */
+  function openEdit(id) {
+    const card = document.getElementById(`proj-${id}`);
+    document.getElementById('edit-id').value = card.dataset.id;
+    document.getElementById('edit-name').value = card.dataset.name;
+    document.getElementById('edit-desc').value = card.dataset.desc;
+    document.getElementById('edit-start').value = card.dataset.start;
+    document.getElementById('edit-end').value = card.dataset.end;
+    buildSwatches('edit-swatches', 'edit-color', card.dataset.color);
+    openModal('modal-edit-project');
+  }
 
-    async function deleteProjectById(id) {
-      const card = document.getElementById(`proj-${id}`);
-      const name = card?.dataset.name ?? 'Dieses Projekt';
-      if (!confirm(`Projekt "${name}" wirklich löschen?\nAlle Aufgaben werden ebenfalls gelöscht.`)) return;
-      const res = await apiFetch(`/project/${id}`, { method:'DELETE' });
-      if (res.ok || res.status === 204) { loadProjects(); if (currentRole !== 'Student') loadTeacherPanel(); }
-    }
+  function logout() { localStorage.removeItem('token'); window.location.href = '/index.html'; }
+  function esc(s) { let t = document.createElement('div'); t.textContent = s; return t.innerHTML; }
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  function toggleSection(id) { const e = document.getElementById(id); e.style.display = (e.style.display==='none'?'grid':'none'); }
+  function openGantt(id) { window.location.href = `/pages/gantt.html?projectId=${id}`; }
 
-    // ── Projekt erstellen ───────────────────────────────────────────────────
-    async function createProject() {
-      const name  = document.getElementById('p-name').value.trim();
-      const desc  = document.getElementById('p-desc').value.trim();
-      const start = document.getElementById('p-start').value;
-      const end   = document.getElementById('p-end').value;
-      const color = document.getElementById('p-color').value;
-
-      if (!name || !start || !end) { showAlert('msg-new-project','Bitte Pflichtfelder ausfüllen (*).'); return; }
-      if (end < start) { showAlert('msg-new-project','Enddatum muss nach Startdatum liegen.'); return; }
-
-      setLoading('btn-create', true);
-      try {
-        const res = await apiFetch('/project', { method:'POST', body: JSON.stringify({ name, description: desc, startDate: start, endDate: end, color }) });
-        if (res.ok) {
-          closeModal('modal-new-project');
-          ['p-name','p-desc','p-start','p-end'].forEach(id => document.getElementById(id).value = '');
-          buildSwatches('new-swatches','p-color','#2D9CDB');
-          hideAlert('msg-new-project');
-          loadProjects();
-          if (currentRole !== 'Student') loadTeacherPanel();
-        } else showAlert('msg-new-project','Fehler beim Erstellen.');
-      } finally { setLoading('btn-create', false); }
-    }
-
-    // ── Projekt speichern ───────────────────────────────────────────────────
-    async function saveEdit() {
-      const id    = document.getElementById('edit-id').value;
-      const name  = document.getElementById('edit-name').value.trim();
-      const desc  = document.getElementById('edit-desc').value.trim();
-      const start = document.getElementById('edit-start').value;
-      const end   = document.getElementById('edit-end').value;
-      const color = document.getElementById('edit-color').value;
-
-      if (!name || !start || !end) { showAlert('msg-edit-project','Bitte Pflichtfelder ausfüllen (*).'); return; }
-      setLoading('btn-save-edit', true);
-      try {
-        const res = await apiFetch(`/project/${id}`, { method:'PUT', body: JSON.stringify({ name, description: desc, startDate: start, endDate: end, color }) });
-        if (res.ok) { closeModal('modal-edit-project'); loadProjects(); }
-        else showAlert('msg-edit-project','Fehler beim Speichern.');
-      } finally { setLoading('btn-save-edit', false); }
-    }
-
-    function openGantt(id) { window.location.href = `/pages/gantt.html?projectId=${id}`; }
-    // ── Export-Funktionen ──────────────────────────────────────────────────
-    async function exportProjectExcel(projectId) {
-      const a = document.createElement('a');
-      a.href = `/api/export/excel/${projectId}`;
-      // Token als Query-Parameter mitgeben, da <a href> keinen Authorization-Header setzt
-      a.href = `/api/export/excel/${projectId}?token=${encodeURIComponent(getToken())}`;
-      a.download = '';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    async function exportProjectPdf(projectId) {
-      const a = document.createElement('a');
-      a.href = `/api/export/pdf/${projectId}?token=${encodeURIComponent(getToken())}`;
-      a.download = '';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    async function exportAllExcel() {
-      const a = document.createElement('a');
-      a.href = `/api/export/excel?token=${encodeURIComponent(getToken())}`;
-      a.download = '';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    async function exportAllPdf() {
-      const a = document.createElement('a');
-      a.href = `/api/export/pdf?token=${encodeURIComponent(getToken())}`;
-      a.download = '';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-
-    document.querySelectorAll('.modal-overlay').forEach(o =>
-      o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
-
-    loadProjects();
-  </script>
-
-  <style>
-    .auth-footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      text-align: center;
-      padding: .75rem 1rem;
-      font-size: .8rem;
-      color: rgba(255,255,255,.45);
-      background: #1E3A5F;
-      backdrop-filter: blur(4px);
-    }
-    .auth-footer a {
-      color: rgba(255,255,255,.65);
-      text-decoration: none;
-      font-weight: 600;
-      transition: color .2s;
-    }
-    .auth-footer a:hover {
-      color: rgba(255,255,255,.95);
-      text-decoration: underline;
-    }
-    .auth-footer .sep { margin: 0 .5rem; opacity: .4; }
-  </style>
-
-  <footer class="auth-footer">
-    © 2025 Projektplaner · Berufsschule Eigenentwicklung
-    <span class="sep">·</span>
-    <a href="/pages/impressum.html">Impressum</a>
-    ·
-    <a href="/pages/datenschutz.html">Datenschutz</a>
-  </footer>
+  loadProjects();
+</script>
 </body>
 </html>

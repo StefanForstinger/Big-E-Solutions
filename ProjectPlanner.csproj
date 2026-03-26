@@ -23,6 +23,7 @@
     <!-- Export: Excel + PDF -->
     <PackageReference Include="ClosedXML" Version="0.102.3" />
     <PackageReference Include="QuestPDF" Version="2024.10.4" />
+    <PackageReference Include="System.IO.Packaging" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>
