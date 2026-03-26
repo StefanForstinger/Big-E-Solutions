@@ -6,35 +6,6 @@
   <title>Projektplaner – Anmelden</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" type="image/png" href="/favicon.png">
-</head>
-<body class="auth-page">
-
-  <div class="auth-box">
-    <div class="auth-logo">
-      <div class="logo-icon">🗓</div>
-      <h1>Projektplaner</h1>
-      <p>Berufsschule – BS2</p>
-    </div>
-
-    <!-- Login -->
-    <div id="tab-login">
-      <form id="login-form" onsubmit="event.preventDefault(); login();">
-        <div class="form-group">
-          <label for="l-email">E-Mail</label>
-          <input id="l-email" name="email" type="email" placeholder="name@schule.at" autocomplete="username" required>
-        </div>
-        <div class="form-group">
-          <label for="l-pass">Passwort</label>
-          <input id="l-pass" name="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
-        </div>
-        <button id="btn-login" type="submit" class="btn btn-primary btn-full btn-lg">
-          Einloggen
-        </button>
-      </form>
-      <div id="msg-login" class="alert alert-hidden"></div>
-    </div>
-  </div>
-
   <style>
     .auth-footer {
       position: fixed;
@@ -60,50 +31,116 @@
     }
     .auth-footer .sep { margin: 0 .5rem; opacity: .4; }
   </style>
+</head>
+<body class="auth-page">
 
-  <footer class="auth-footer">
-    © 2025 Projektplaner · Berufsschule Eigenentwicklung
-    <span class="sep">·</span>
-    <a href="/pages/impressum.html">Impressum</a>
-    ·
-    <a href="/pages/datenschutz.html">Datenschutz</a>
-  </footer>
-  
-  <script src="/js/api.js"></script>
-  <script>
-    // Weiterleitung wenn bereits eingeloggt
-    if (isLoggedIn()) window.location.href = '/pages/dashboard.html';
+<div class="auth-box">
+  <div class="auth-logo">
+    <div class="logo-icon">🗓</div>
+    <h1>Projektplaner</h1>
+    <p>Berufsschule – BS2</p>
+  </div>
 
-    async function login() {
-      const email = document.getElementById('l-email').value.trim();
-      const pass  = document.getElementById('l-pass').value;
-      if (!email || !pass) { showAlert('msg-login', 'Bitte alle Felder ausfüllen.'); return; }
+  <div id="tab-login">
+    <form id="login-form">
+      <div class="form-group">
+        <label for="l-email">E-Mail</label>
+        <input id="l-email" name="email" type="email" placeholder="name@schule.at" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label for="l-pass">Passwort</label>
+        <input id="l-pass" name="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
+      </div>
+      <button id="btn-login" type="submit" class="btn btn-primary btn-full btn-lg">
+        Einloggen
+      </button>
+    </form>
+    <div id="msg-login" class="alert alert-hidden"></div>
+  </div>
+</div>
 
-      setLoading('btn-login', true);
-      try {
-        const res = await fetch('/api/auth/login', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ email, password: pass })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setToken(data.token);
-          // Passwort-Änderung erzwingen wenn nötig
+<footer class="auth-footer">
+  © 2026 Projektplaner · Berufsschule Eigenentwicklung
+  <span class="sep">·</span>
+  <a href="/pages/impressum.html">Impressum</a>
+  ·
+  <a href="/pages/datenschutz.html">Datenschutz</a>
+</footer>
+
+<script src="/js/api.js"></script>
+<script>
+  // Redirect if already logged in
+  if (typeof isLoggedIn === 'function' && isLoggedIn()) {
+    window.location.href = '/pages/dashboard.html';
+  }
+
+  const loginForm = document.getElementById('login-form');
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('l-email').value.trim();
+    const pass  = document.getElementById('l-pass').value;
+
+    if (!email || !pass) {
+      showAlert('msg-login', 'Bitte alle Felder ausfüllen.');
+      return;
+    }
+
+    setLoading('btn-login', true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email, password: pass })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Store token using your api.js helper
+        setToken(data.token);
+
+        // IMPORTANT: A slight delay helps the browser's password manager 
+        // register the "success" of this form before the page is destroyed by redirect.
+        setTimeout(() => {
           if (data.mustChangePassword) {
             window.location.href = '/pages/change-password.html';
           } else {
             window.location.href = '/pages/dashboard.html';
           }
-        } else {
-          showAlert('msg-login', data.error ?? 'Login fehlgeschlagen.');
-        }
-      } catch {
-        showAlert('msg-login', 'Server nicht erreichbar.');
-      } finally {
-        setLoading('btn-login', false);
+        }, 200);
+
+      } else {
+        showAlert('msg-login', data.error ?? 'Login fehlgeschlagen.');
       }
+    } catch (err) {
+      console.error("Login error:", err);
+      showAlert('msg-login', 'Server nicht erreichbar.');
+    } finally {
+      setLoading('btn-login', false);
     }
-  </script>
+  });
+
+  // Simple alert helper if not defined in api.js
+  function showAlert(id, text) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = text;
+      el.classList.remove('alert-hidden');
+      setTimeout(() => el.classList.add('alert-hidden'), 5000);
+    }
+  }
+
+  // Simple loading helper if not defined in api.js
+  function setLoading(id, isLoading) {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.disabled = isLoading;
+      btn.textContent = isLoading ? 'Lädt...' : 'Einloggen';
+    }
+  }
+</script>
 </body>
 </html>
