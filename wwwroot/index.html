@@ -9,15 +9,14 @@
   <style>
     .auth-footer {
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      bottom: 0; left: 0; right: 0;
       text-align: center;
       padding: .75rem 1rem;
       font-size: .8rem;
       color: rgba(255,255,255,.45);
       background: rgba(0,0,0,.15);
       backdrop-filter: blur(4px);
+      z-index: 100;
     }
     .auth-footer a {
       color: rgba(255,255,255,.65);
@@ -69,7 +68,7 @@
 
 <script src="/js/api.js"></script>
 <script>
-  // Redirect if already logged in
+  // Sofort-Check: Wenn Token vorhanden, direkt zum Dashboard
   if (typeof isLoggedIn === 'function' && isLoggedIn()) {
     window.location.href = '/pages/dashboard.html';
   }
@@ -77,10 +76,12 @@
   const loginForm = document.getElementById('login-form');
 
   loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Verhindert den Standard-Seiten-Reload
 
-    const email = document.getElementById('l-email').value.trim();
-    const pass  = document.getElementById('l-pass').value;
+    const emailInput = document.getElementById('l-email');
+    const passInput  = document.getElementById('l-pass');
+    const email = emailInput.value.trim();
+    const pass  = passInput.value;
 
     if (!email || !pass) {
       showAlert('msg-login', 'Bitte alle Felder ausfüllen.');
@@ -99,11 +100,12 @@
       const data = await res.json();
 
       if (res.ok) {
-        // Store token using your api.js helper
+        // Token in localStorage speichern via api.js
         setToken(data.token);
 
-        // IMPORTANT: A slight delay helps the browser's password manager 
-        // register the "success" of this form before the page is destroyed by redirect.
+        // WICHTIG: Ein kleiner Delay (200ms) erlaubt dem Browser, die 
+        // Formular-Interaktion als "erfolgreich" zu registrieren,
+        // bevor die aktuelle Seite durch window.location zerstört wird.
         setTimeout(() => {
           if (data.mustChangePassword) {
             window.location.href = '/pages/change-password.html';
@@ -116,29 +118,29 @@
         showAlert('msg-login', data.error ?? 'Login fehlgeschlagen.');
       }
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Login Error:", err);
       showAlert('msg-login', 'Server nicht erreichbar.');
     } finally {
       setLoading('btn-login', false);
     }
   });
 
-  // Simple alert helper if not defined in api.js
+  // Fallback falls showAlert nicht in api.js definiert ist
   function showAlert(id, text) {
     const el = document.getElementById(id);
     if (el) {
       el.textContent = text;
-      el.classList.remove('alert-hidden');
-      setTimeout(() => el.classList.add('alert-hidden'), 5000);
+      el.className = 'alert alert-error'; // Zeigt den Fehler an
+      setTimeout(() => { el.className = 'alert alert-hidden'; }, 5000);
     }
   }
 
-  // Simple loading helper if not defined in api.js
-  function setLoading(id, isLoading) {
+  // Fallback falls setLoading nicht in api.js definiert ist
+  function setLoading(id, loading) {
     const btn = document.getElementById(id);
     if (btn) {
-      btn.disabled = isLoading;
-      btn.textContent = isLoading ? 'Lädt...' : 'Einloggen';
+      btn.disabled = loading;
+      btn.textContent = loading ? 'Lädt...' : 'Einloggen';
     }
   }
 </script>
