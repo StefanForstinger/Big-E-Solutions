@@ -21,12 +21,17 @@ function isLoggedIn() {
 function getUser() {
   const token = getToken();
   if (!token) return null;
+
   try {
-    return JSON.parse(atob(token.split('.')[1]));
+    const base64 = token.split('.')[1];
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json);
   } catch {
     return null;
   }
 }
+function logout() { clearToken(); window.location.href = '/index.html'; }
 
 function getUserName() {
   const u = getUser();
