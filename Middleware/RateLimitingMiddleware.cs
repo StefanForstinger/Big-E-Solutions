@@ -22,7 +22,7 @@ public class RateLimitingMiddleware
         // ✅ Rate limits pro Endpoint
         var limits = new Dictionary<string, (int count, int minutes)>
         {
-            { "/api/auth/login", (5, 15) },              // 5 attempts in 15 minutes
+            { "/api/auth/login", (15, 15) },              // 5 attempts in 15 minutes
             { "/api/auth/create-user", (20, 60) },       // 20 requests in 60 minutes
             { "/api/auth/change-password", (10, 60) }    // 10 requests in 60 minutes
         };
