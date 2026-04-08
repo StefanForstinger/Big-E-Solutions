@@ -112,3 +112,5 @@ Desktop.ini
 # appsettings with secrets (keep template, ignore local)
 appsettings.Development.json
 appsettings.Local.json
+
+.env

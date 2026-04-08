@@ -11,16 +11,21 @@ public class JwtService
 {
     private readonly IConfiguration      _config;
     private readonly UserManager<AppUser> _userManager;
+    private readonly ILogger<JwtService> _logger;
 
-    public JwtService(IConfiguration config, UserManager<AppUser> userManager)
+    public JwtService(IConfiguration config, UserManager<AppUser> userManager, ILogger<JwtService> logger)
     {
         _config      = config;
         _userManager = userManager;
+        _logger      = logger;
     }
 
     /// <summary>
     /// Generiert ein JWT mit den Identity-Rollen aus der Datenbank.
-    /// Enthält zusätzlich MustChangePassword und PrivacyAccepted als Claims.
+    /// SECURITY FIXES:
+    /// - Reads JWT secret from JWT_SECRET_KEY environment variable
+    /// - Token expiry reduced from 8h to 4h
+    /// - Added logging and error handling
     /// </summary>
     public string GenerateToken(AppUser user)
     {
@@ -37,14 +42,25 @@ public class JwtService
             new("privacyAccepted",         user.PrivacyAccepted.ToString().ToLower())
         };
 
-        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+        // SECURITY FIX: Read from environment variable first
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
+            ?? _config["Jwt:Key"];
+        
+        if (string.IsNullOrEmpty(jwtKey))
+        {
+            _logger.LogError("SECURITY: JWT_SECRET_KEY not configured");
+            throw new InvalidOperationException("JWT secret key is not configured");
+        }
+
+        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var cred  = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        // SECURITY FIX: Reduced expiry from 8 hours to 4 hours
         var token = new JwtSecurityToken(
             issuer:             _config["Jwt:Issuer"],
             audience:           _config["Jwt:Audience"],
             claims:             claims,
-            expires:            DateTime.UtcNow.AddHours(8),
+            expires:            DateTime.UtcNow.AddHours(4),
             signingCredentials: cred);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
