@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ProjectPlanner.Data;
+using ProjectPlanner.Middleware;
 using ProjectPlanner.Models;
 using ProjectPlanner.Services;
 using System.Text;
@@ -105,9 +106,17 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
+// ── Rate Limiting (manuell ohne externe Library) ──────────────────────────────────
+// SECURITY FIX: Prevent brute force attacks
+var rateLimitStore = new Dictionary<string, List<DateTime>>();
+builder.Services.AddSingleton(rateLimitStore);
+
 var app = builder.Build();
 
-// ── Rollen beim Start sicherstellen ���─────────────────────────────────────────
+// ── Rate Limiting Middleware ────────────────────────────────────────────────────
+app.UseRateLimiting();
+
+// ── Rollen beim Start sicherstellen ──────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
