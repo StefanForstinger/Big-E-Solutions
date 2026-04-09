@@ -46,9 +46,10 @@
     <a href="/pages/dashboard.html" class="navbar-brand">🗓 Projektplaner</a>
     <div class="navbar-right">
       <div id="admin-nav-link" style="display: none; margin-right: 1rem;">
-        <a href="/pages/user-management.html" class="btn btn-outline btn-sm">👥 Benutzer</a>
+<!--        <a href="/pages/user-management.html" class="btn btn-outline btn-sm">👥 Benutzer</a>-->
       </div>
-      <span id="nav-user"></span> <span id="nav-role" class="role-badge"></span>
+      <span class="navbar-user" id="nav-user"></span>
+      <span class="role-badge" id="nav-role"></span>
       <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
     </div>
   </nav>
@@ -318,6 +319,22 @@
     document.getElementById('detail-panel').classList.add('open');
     return true;
   });
+  async function checkAdmin() {
+    //   const user = await fetchMe();
+    //   if (!user || user.role !== 'Admin') {
+    //     window.location.href = '/pages/dashboard.html';
+    //   }
+    //wer des gmocht hod is a koffa
+
+    // Populate navbar
+    document.getElementById('nav-user').textContent = getUserName();
+
+    const roleEl = document.getElementById('nav-role');
+    const role = currentRole.toLowerCase();
+
+    roleEl.textContent = currentRole;
+    roleEl.className = `role-badge role-${role}`;
+  }
 
   // Assignments laden und anzeigen
   async function loadAssignments(taskId) {
@@ -428,6 +445,7 @@
   // Start
   loadProjectMembers();
   loadGantt();
+  checkAdmin();
 </script>
 </body>
 </html>
