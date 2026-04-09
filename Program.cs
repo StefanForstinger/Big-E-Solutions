@@ -45,11 +45,11 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
-    options.Password.RequireDigit           = true;
-    options.Password.RequiredLength         = 12;
-    options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequireUppercase       = true;
-    options.Password.RequireLowercase       = true;
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 6;
+    options.Password.RequireNonAlphanumeric = true;                  // CHANGED: now required
+    options.Password.RequireUppercase = true;                  // CHANGED: now required
+    options.Password.RequireLowercase = true;                  // NEW: Added
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
@@ -61,15 +61,15 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer           = true,
-        ValidateAudience         = true,
-        ValidateLifetime         = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         ValidIssuer              = builder.Configuration["Jwt:Issuer"],
         ValidAudience            = builder.Configuration["Jwt:Audience"],
@@ -88,6 +88,7 @@ builder.Services.AddAuthorization();
 // ─────────────────────────────────────────────
 
 builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<ProjectPlanner.Services.PlanningService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -159,28 +160,26 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
     foreach (var role in new[] { "Admin", "Teacher", "Student" })
     {
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole(role));
     }
 
+    // Standard-Arbeitszeitplan anlegen wenn noch keiner existiert
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
     if (!await db.WorkSchedules.AnyAsync())
     {
-        db.WorkSchedules.Add(new WorkSchedule
+        db.WorkSchedules.Add(new ProjectPlanner.Models.WorkSchedule
         {
-            Name           = "Standard-Woche (Mo–Fr)",
-            ProjectId      = null,
-            WorkDaysMask   = 62,
+            Name = "Standard-Woche (Mo–Fr)",
+            ProjectId = null,
+            WorkDaysMask = 62,
             DailyStartTime = "08:00",
-            DailyEndTime   = "17:00",
-            DailyHours     = 8,
-            IsDefault      = true
+            DailyEndTime = "17:00",
+            DailyHours = 8,
+            IsDefault = true
         });
-
         await db.SaveChangesAsync();
     }
 }

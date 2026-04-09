@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectPlanner.Data;
 using ProjectPlanner.Models;
+using ProjectPlanner.Services;
 
 namespace ProjectPlanner.Controllers;
 
@@ -15,11 +16,13 @@ public class TaskController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly UserManager<AppUser> _userManager;
+    private readonly PlanningService _planning;
 
-    public TaskController(AppDbContext db, UserManager<AppUser> userManager)
+    public TaskController(AppDbContext db, UserManager<AppUser> userManager, PlanningService planning)
     {
         _db = db;
         _userManager = userManager;
+        _planning = planning;
     }
 
     // ── Gantt-Daten (Tasks + Links) ──────────────────────────────────────────
@@ -89,14 +92,16 @@ public class TaskController : ControllerBase
             resolvedAssigneeId = dto.AssigneeId;
         }
 
-        // Prüfen: Task darf Eltern-Meilenstein nicht überschreiten
-        if (dto.ParentId != null)
+        var isMilestone = dto.IsMilestone ?? false;
+
+        // Für normale Tasks: Meilenstein-Grenzen nur auf StartDate prüfen (EndDate wird berechnet)
+        if (dto.ParentId != null && !isMilestone)
         {
             var parent = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == dto.ParentId && t.ProjectId == projectId);
             if (parent != null && parent.IsMilestone)
             {
-                if (dto.StartDate < parent.StartDate || dto.EndDate > parent.EndDate)
-                    return BadRequest(new { error = $"Task muss innerhalb des Meilensteins liegen ({parent.StartDate:dd.MM.yyyy} – {parent.EndDate:dd.MM.yyyy})." });
+                if (dto.StartDate < parent.StartDate)
+                    return BadRequest(new { error = $"Startdatum muss innerhalb des Meilensteins liegen (ab {parent.StartDate:dd.MM.yyyy})." });
             }
         }
 
@@ -104,12 +109,12 @@ public class TaskController : ControllerBase
         {
             Title = dto.Title,
             StartDate = dto.StartDate,
-            EndDate = dto.EndDate,
+            EndDate = dto.EndDate ?? dto.StartDate, // Wird für Tasks durch PlanningService berechnet
             Progress = Math.Clamp(dto.Progress, 0, 100),
             ParentId = dto.ParentId,
             Priority = dto.Priority ?? "Medium",
             Status = dto.Status ?? "Open",
-            IsMilestone = dto.IsMilestone ?? false,
+            IsMilestone = isMilestone,
             Note = dto.Note,
             ProjectId = projectId,
             AssigneeId = resolvedAssigneeId,
@@ -118,6 +123,10 @@ public class TaskController : ControllerBase
 
         _db.Tasks.Add(task);
         await _db.SaveChangesAsync();
+
+        // Vorwärtsplanung: Enddatum berechnen (nur für normale Tasks mit Dauer)
+        await _planning.CalculateScheduleAsync(task);
+
         return Ok(new { tid = task.Id });
     }
 
@@ -138,23 +147,10 @@ public class TaskController : ControllerBase
                 return BadRequest(new { error = "Die zugewiesene Person ist kein Mitglied dieses Projekts." });
         }
 
-        // Prüfen: Task darf Eltern-Meilenstein nicht überschreiten
-        var parentId = dto.ParentId ?? task.ParentId;
-        if (parentId != null)
-        {
-            var parent = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == parentId && t.ProjectId == projectId);
-            if (parent != null && parent.IsMilestone)
-            {
-                if (dto.StartDate < parent.StartDate || dto.EndDate > parent.EndDate)
-                    return BadRequest(new { error = $"Task muss innerhalb des Meilensteins liegen ({parent.StartDate:dd.MM.yyyy} – {parent.EndDate:dd.MM.yyyy})." });
-            }
-        }
-
         task.Title = dto.Title;
         task.StartDate = dto.StartDate;
-        task.EndDate = dto.EndDate;
         task.Progress = Math.Clamp(dto.Progress, 0, 100);
-        task.ParentId = dto.ParentId;
+        if (dto.ParentId != null) task.ParentId = dto.ParentId;
         if (dto.Priority != null) task.Priority = dto.Priority;
         if (dto.Status != null) task.Status = dto.Status;
         if (dto.IsMilestone != null) task.IsMilestone = dto.IsMilestone.Value;
@@ -162,7 +158,17 @@ public class TaskController : ControllerBase
         if (dto.AssigneeId != null) task.AssigneeId = dto.AssigneeId == "" ? null : dto.AssigneeId;
         if (dto.PlannedDuration != null) task.PlannedDuration = dto.PlannedDuration;
 
+        // Meilensteine: EndDate manuell setzen; Tasks: wird berechnet
+        if (task.IsMilestone && dto.EndDate != null)
+        {
+            task.EndDate = dto.EndDate.Value;
+        }
+
         await _db.SaveChangesAsync();
+
+        // Vorwärtsplanung für normale Tasks
+        await _planning.CalculateScheduleAsync(task);
+
         return Ok(task);
     }
 
@@ -195,6 +201,12 @@ public class TaskController : ControllerBase
         };
         _db.TaskLinks.Add(link);
         await _db.SaveChangesAsync();
+
+        // Nachfolger-Task neu berechnen (Vorgänger hat sich geändert)
+        var targetTask = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == dto.Target && t.ProjectId == projectId);
+        if (targetTask != null)
+            await _planning.CalculateScheduleAsync(targetTask);
+
         return Ok(new { tid = link.Id });
     }
 
@@ -205,8 +217,15 @@ public class TaskController : ControllerBase
     {
         var link = await _db.TaskLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.ProjectId == projectId);
         if (link == null) return NotFound();
+        var targetId = link.Target;
         _db.TaskLinks.Remove(link);
         await _db.SaveChangesAsync();
+
+        // Nachfolger-Task neu berechnen (Vorgänger-Link entfernt)
+        var targetTask = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == targetId && t.ProjectId == projectId);
+        if (targetTask != null)
+            await _planning.CalculateScheduleAsync(targetTask);
+
         return NoContent();
     }
 
@@ -275,7 +294,7 @@ public class TaskController : ControllerBase
 public record TaskDto(
     string Title,
     DateTime StartDate,
-    DateTime EndDate,
+    DateTime? EndDate,
     int Progress,
     int? ParentId,
     string? AssigneeId = null,

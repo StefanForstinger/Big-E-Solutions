@@ -273,7 +273,7 @@
   function renderProjects(projects) {
     const grid = document.getElementById('project-grid');
     grid.innerHTML = projects.map(p => {
-      const start = p.startDate?.slice(0 ,10) ?? '';
+      const start = p.startDate?.slice(0,10) ?? '';
       const end = p.endDate?.slice(0,10) ?? '';
       const canManage = (p.ownerId === currentUser?.nameid || currentRole === 'Admin');
 
