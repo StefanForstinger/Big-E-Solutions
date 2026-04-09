@@ -13,12 +13,12 @@ namespace ProjectPlanner.Controllers;
 [Authorize]
 public class ProjectController : ControllerBase
 {
-    private readonly AppDbContext         _db;
+    private readonly AppDbContext _db;
     private readonly UserManager<AppUser> _userManager;
 
     public ProjectController(AppDbContext db, UserManager<AppUser> userManager)
     {
-        _db          = db;
+        _db = db;
         _userManager = userManager;
     }
 
@@ -29,7 +29,7 @@ public class ProjectController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var role   = User.FindFirstValue(ClaimTypes.Role)!;
+        var role = User.FindFirstValue(ClaimTypes.Role)!;
 
         var query = _db.Projects
             .Include(p => p.Tasks)
@@ -43,10 +43,16 @@ public class ProjectController : ControllerBase
 
         var result = projects.Select(p => new
         {
-            p.Id, p.Name, p.Description, p.StartDate, p.EndDate, p.OwnerId, p.Color,
-            owner    = p.Owner == null ? null : new { p.Owner.FullName },
-            tasks    = p.Tasks.Select(t => new { t.Id, t.Progress }),
-            members  = p.Members.Select(m => new { m.UserId, m.User.FullName, m.User.Email, m.JoinedAt }),
+            p.Id,
+            p.Name,
+            p.Description,
+            p.StartDate,
+            p.EndDate,
+            p.OwnerId,
+            p.Color,
+            owner = p.Owner == null ? null : new { p.Owner.FullName },
+            tasks = p.Tasks.Select(t => new { t.Id, t.Progress }),
+            members = p.Members.Select(m => new { m.UserId, m.User.FullName, m.User.Email, m.JoinedAt }),
             progress = p.Tasks.Any() ? (int)p.Tasks.Average(t => t.Progress) : 0,
             isReadOnly = role == "Teacher" // Lehrer haben nur Lesezugriff
         });
@@ -58,8 +64,8 @@ public class ProjectController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id)
     {
-        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var role    = User.FindFirstValue(ClaimTypes.Role)!;
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var role = User.FindFirstValue(ClaimTypes.Role)!;
         var project = await _db.Projects
             .Include(p => p.Tasks)
             .Include(p => p.Members).ThenInclude(m => m.User)
@@ -70,13 +76,30 @@ public class ProjectController : ControllerBase
         if (project.OwnerId != userId && role is not ("Admin" or "Teacher") && !project.Members.Any(m => m.UserId == userId))
             return Forbid();
 
+        // Owner-Daten laden (für Dropdown)
+        var owner = await _db.Users.FindAsync(project.OwnerId);
+
+        // Alle Projektmitglieder inkl. Owner als einheitliche Liste
+        var memberList = project.Members
+            .Select(m => new { id = m.UserId, fullName = m.User.FullName, shortName = m.User.ShortName, m.User.Email })
+            .ToList<object>();
+
+        // Owner hinzufügen falls noch nicht in der Liste
+        if (owner != null && !project.Members.Any(m => m.UserId == owner.Id))
+            memberList.Insert(0, new { id = owner.Id, fullName = owner.FullName, shortName = owner.ShortName, owner.Email });
+
         return Ok(new
         {
-            project.Id, project.Name, project.Description,
-            project.StartDate, project.EndDate, project.OwnerId, project.Color,
-            members       = project.Members.Select(m => new { m.UserId, m.User.FullName, m.User.Email, m.JoinedAt }),
+            project.Id,
+            project.Name,
+            project.Description,
+            project.StartDate,
+            project.EndDate,
+            project.OwnerId,
+            project.Color,
+            members = memberList,
             workSchedules = project.WorkSchedules,
-            isReadOnly    = role == "Teacher"
+            isReadOnly = role == "Teacher"
         });
     }
 
@@ -85,15 +108,15 @@ public class ProjectController : ControllerBase
     [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Create([FromBody] ProjectDto dto)
     {
-        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var project = new Project
         {
-            Name        = dto.Name,
+            Name = dto.Name,
             Description = dto.Description,
-            StartDate   = dto.StartDate,
-            EndDate     = dto.EndDate,
-            Color       = dto.Color ?? "#2D9CDB",
-            OwnerId     = userId
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            Color = dto.Color ?? "#2D9CDB",
+            OwnerId = userId
         };
         _db.Projects.Add(project);
         await _db.SaveChangesAsync();
@@ -105,16 +128,16 @@ public class ProjectController : ControllerBase
     [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Update(int id, [FromBody] ProjectDto dto)
     {
-        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var project = await _db.Projects.FindAsync(id);
 
         if (project == null) return NotFound();
         if (project.OwnerId != userId && !User.IsInRole("Admin")) return Forbid();
 
-        project.Name        = dto.Name;
+        project.Name = dto.Name;
         project.Description = dto.Description;
-        project.StartDate   = dto.StartDate;
-        project.EndDate     = dto.EndDate;
+        project.StartDate = dto.StartDate;
+        project.EndDate = dto.EndDate;
         if (dto.Color != null) project.Color = dto.Color;
 
         await _db.SaveChangesAsync();
@@ -126,7 +149,7 @@ public class ProjectController : ControllerBase
     [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Delete(int id)
     {
-        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var project = await _db.Projects.FindAsync(id);
 
         if (project == null) return NotFound();
@@ -158,8 +181,8 @@ public class ProjectController : ControllerBase
         _db.ProjectMembers.Add(new ProjectMember
         {
             ProjectId = id,
-            UserId    = dto.UserId,
-            JoinedAt  = DateTime.UtcNow
+            UserId = dto.UserId,
+            JoinedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
 
