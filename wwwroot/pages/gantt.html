@@ -151,6 +151,15 @@
                 color: #fff !important;
                 font-weight: 700;
             }
+
+        /* Ressourcen-Spalte: Chips umbrechen lassen */
+        .gantt_cell[data-column-name="assignments_col"] .gantt_tree_content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            overflow: visible;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -185,7 +194,8 @@
                 <div class="form-group"><label>Name *</label><input id="t-title" type="text" placeholder="Aufgabenname..."></div>
                 <div class="form-row">
                     <div class="form-group"><label>Start *</label><input id="t-start" type="date"></div>
-                    <div class="form-group"><label>Ende *</label><input id="t-end" type="date"></div>
+                    <div class="form-group" id="t-end-group"><label>Ende *</label><input id="t-end" type="date"></div>
+                    <div class="form-group" id="t-duration-group" style="display:none;"><label>Dauer (Stunden) *</label><input id="t-duration" type="number" min="1" step="1" placeholder="z.B. 16"></div>
                 </div>
                 <div class="form-group"><label>Zuständig</label><select id="t-assignee"></select></div>
                 <div id="msg-add-task" style="color:red; min-height:1.2em;"></div>
@@ -209,23 +219,27 @@
             <div id="tab-info" class="detail-pane active">
                 <div id="dp-status" class="badge"></div>
                 <p><strong>Zeitraum:</strong> <span id="dp-dates"></span></p>
+                <p id="dp-duration-row"><strong>Dauer:</strong> <span id="dp-duration"></span></p>
                 <p><strong>Zuständig:</strong> <span id="dp-assignee"></span></p>
                 <p><strong>Fortschritt:</strong> <span id="dp-progress">0%</span></p>
             </div>
             <div id="tab-assignments" class="detail-pane">
                 <div id="assignments-list" style="margin-bottom: 1rem;">
-                    <div style="color: var(--gray-600); font-style: italic;">Keine Zuweisungen</div>
+                    <div style="color: var(--gray-500); font-style: italic; text-align:center; padding:1.5rem 0; font-size:0.9rem;">👤 Noch keine Zuweisungen</div>
                 </div>
-                <div style="border-top: 1px solid var(--gray-200); padding-top: 1rem;">
-                    <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">Neue Zuweisung</h4>
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <select id="assign-user" style="flex: 2; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px;">
-                            <option value="">Mitarbeiter wählen...</option>
-                        </select>
-                        <input id="assign-percentage" type="number" min="1" max="100" placeholder="%" style="width: 80px; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px;">
-                        <button class="btn btn-sm btn-primary" onclick="addAssignment()" style="white-space: nowrap;">➕ Hinzufügen</button>
+                <div style="background:var(--gray-50); border:1px solid var(--gray-200); border-radius:8px; padding:0.75rem;">
+                    <h4 style="margin:0 0 0.5rem 0; font-size:0.85rem; color:var(--gray-600); text-transform:uppercase; letter-spacing:0.5px;">Neue Zuweisung</h4>
+                    <select id="assign-user" style="width:100%; padding:0.5rem; border:1px solid var(--gray-300); border-radius:6px; margin-bottom:0.5rem; font-size:0.9rem;">
+                        <option value="">Mitarbeiter wählen...</option>
+                    </select>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <div style="position:relative; flex:1;">
+                            <input id="assign-percentage" type="number" min="1" max="100" placeholder="Anteil" style="width:100%; padding:0.5rem 2rem 0.5rem 0.5rem; border:1px solid var(--gray-300); border-radius:6px; font-size:0.9rem; box-sizing:border-box;">
+                            <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:0.85rem; pointer-events:none;">%</span>
+                        </div>
+                        <button onclick="addAssignment()" style="padding:0.5rem 1rem; background:var(--primary, #001f3f); color:#fff; border:none; border-radius:6px; font-size:0.85rem; font-weight:600; cursor:pointer; white-space:nowrap; transition:opacity .15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">+ Hinzufügen</button>
                     </div>
-                    <div id="msg-assignment" style="font-size: 0.85rem; min-height: 1.2em; color: var(--danger);"></div>
+                    <div id="msg-assignment" style="font-size: 0.82rem; min-height: 1.2em; color: var(--danger); margin-top:0.3rem;"></div>
                 </div>
             </div>
             <div id="tab-edit" class="detail-pane">
@@ -242,6 +256,22 @@
                         <option value="Done">Abgeschlossen</option>
                     </select>
                 </div>
+                <div style="display:flex; gap:0.5rem;">
+                    <div class="detail-edit-row" style="flex:1;">
+                        <label>Start</label>
+                        <input id="et-start" type="date">
+                    </div>
+                    <div class="detail-edit-row" id="et-end-group" style="flex:1; display:none;">
+                        <label>Ende</label>
+                        <input id="et-end" type="date">
+                    </div>
+                    <div class="detail-edit-row" id="et-duration-group" style="flex:1;">
+                        <label>Dauer (Std.)</label>
+                        <input id="et-duration" type="number" min="1" step="1" placeholder="Stunden">
+                    </div>
+                </div>
+                <div id="et-calculated-end" style="font-size:0.82rem; color:var(--gray-600); margin-top:-6px; min-height:1.2em;"></div>
+                <div id="et-date-hint" style="font-size:0.8rem; color:#6366f1; min-height:1.2em;"></div>
                 <div class="detail-edit-row">
                     <label>Fortschritt: <strong id="et-progress-label">0%</strong></label>
                     <input id="et-progress" type="range" min="0" max="100" step="5" value="0"
@@ -279,8 +309,43 @@
         gantt.config.readonly = (currentRole === 'Teacher');
 
         // Spalten links im Grid (inkl. Fortschritt)
+        var MAX_VISIBLE_CHIPS = 2;
         gantt.config.columns = [
             { name: 'text', label: 'Aufgabe', tree: true, width: 190, resize: true },
+            {
+                name: 'assignments_col', label: 'Ressourcen', width: 170, align: 'left', resize: true,
+                template: function (task) {
+                    if (!task.assignments || task.assignments.length === 0) return '';
+                    var visible = task.assignments.slice(0, MAX_VISIBLE_CHIPS);
+                    var rest = task.assignments.length - MAX_VISIBLE_CHIPS;
+                    var tooltip = task.assignments.map(function (a) {
+                        return (a.shortName || a.userName) + ' ' + a.percentage + '%';
+                    }).join('\n');
+                    var chips = visible.map(function (a) {
+                        var label = a.shortName || a.userName || '?';
+                        return '<span title="' + (a.userName || '') + ' – ' + a.percentage + '%"'
+                            + ' style="display:inline-flex;align-items:center;gap:2px;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;border-radius:10px;padding:2px 6px;white-space:nowrap;cursor:pointer;"'
+                            + ' onclick="event.stopPropagation(); promptEditAssignmentPct(' + task.id + ',\'' + (a.userId || '') + '\',' + a.percentage + ')">'
+                            + label + '<span style="background:#c7d2fe;border-radius:8px;padding:0 4px;font-size:9px;">' + a.percentage + '%</span></span>';
+                    }).join(' ');
+                    var badge = '';
+                    if (rest > 0) {
+                        badge = ' <span title="' + tooltip + '"'
+                            + ' style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;background:#6366f1;color:#fff;font-size:9px;font-weight:700;border-radius:9px;padding:0 5px;cursor:pointer;vertical-align:middle;"'
+                            + ' onclick="event.stopPropagation(); openAssignmentsTab(' + task.id + ')">+' + rest + '</span>';
+                    }
+                    return '<span style="display:inline-flex;align-items:center;gap:3px;flex-wrap:nowrap;">' + chips + badge + '</span>';
+                }
+            },
+            {
+                name: 'duration_col', label: 'Dauer', width: 65, align: 'center', resize: false,
+                template: function (task) {
+                    if (task.isMilestone) return '';
+                    var d = task.plannedDuration;
+                    if (!d) return '';
+                    return '<span style="font-size:10px;font-weight:700;color:#475569;">' + d + 'h</span>';
+                }
+            },
             {
                 name: 'status', label: 'Status', width: 105, align: 'center', resize: false,
                 template: function (task) {
@@ -306,6 +371,45 @@
             },
             { name: 'add', label: '', width: 36 }
         ];
+
+        // Inline-Bearbeitung: Klick auf Ressourcen-Chip -> Prozent ändern
+        function openAssignmentsTab(taskId) {
+            // Task im Gantt anklicken -> Detail-Panel öffnen, dann Zuweisungen-Tab
+            gantt.ext.inlineEditors && gantt.ext.inlineEditors.hide();
+            var task = gantt.getTask(taskId);
+            if (!task) return;
+            currentTaskId = taskId;
+            document.getElementById('dp-title').textContent = task.text;
+            document.getElementById('detail-panel').classList.add('open');
+            switchTab('assignments');
+        }
+
+        async function promptEditAssignmentPct(taskId, userId, currentPct) {
+            var newPct = prompt('Neuer Prozentsatz für Zuweisung (1-100):', currentPct);
+            if (newPct === null) return;
+            newPct = parseInt(newPct, 10);
+            if (!newPct || newPct < 1 || newPct > 100) { alert('Bitte eine Zahl zwischen 1 und 100 eingeben.'); return; }
+            // assignmentId ermitteln: lade Assignments für den Task
+            try {
+                var res = await apiFetch('/tasks/' + taskId + '/assignments');
+                if (!res.ok) return;
+                var assignments = await res.json();
+                var match = assignments.find(function (a) { return (a.userId || a.UserId) === userId; });
+                if (!match) { alert('Zuweisung nicht gefunden.'); return; }
+                var putRes = await apiFetch('/tasks/' + taskId + '/assignments/' + (match.id || match.Id), {
+                    method: 'PUT',
+                    body: JSON.stringify({ percentage: newPct })
+                });
+                if (putRes.ok) {
+                    await loadGantt();
+                    // Wenn Detail-Panel offen und gleicher Task, auch dort aktualisieren
+                    if (currentTaskId == taskId) loadAssignments(taskId);
+                } else {
+                    var data = await putRes.json().catch(function () { return {}; });
+                    alert(data.error || 'Fehler beim Aktualisieren.');
+                }
+            } catch (err) { alert('Server nicht erreichbar.'); }
+        }
 
         gantt.init('gantt_here');
 
@@ -344,26 +448,44 @@
             const title = document.getElementById('t-title').value.trim();
             const start = document.getElementById('t-start').value;
             const end = document.getElementById('t-end').value;
+            const duration = document.getElementById('t-duration').value;
             const parentId = document.getElementById('t-parent-id').value;
 
-            if (!title || !start || !end) {
+            if (!title || !start) {
                 document.getElementById('msg-add-task').textContent = "Bitte alles ausfüllen!";
                 return;
+            }
+
+            // Meilenstein braucht Ende, Task braucht Dauer
+            if (addingMilestone && !end) {
+                document.getElementById('msg-add-task').textContent = "Bitte Enddatum angeben!";
+                return;
+            }
+            if (!addingMilestone && !duration) {
+                document.getElementById('msg-add-task').textContent = "Bitte Dauer in Stunden angeben!";
+                return;
+            }
+
+            const body = {
+                title,
+                startDate: start,
+                parentId: parentId ? parseInt(parentId) : null,
+                status: 'Open',
+                priority: 'Medium',
+                isMilestone: addingMilestone
+            };
+
+            if (addingMilestone) {
+                body.endDate = end;
+            } else {
+                body.plannedDuration = parseFloat(duration);
             }
 
             setLoading('btn-add-task', true);
             try {
                 const res = await apiFetch(`/projects/${projectId}/tasks`, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        title,
-                        startDate: start,
-                        endDate: end,
-                        parentId: parentId ? parseInt(parentId) : null,
-                        status: 'Open',
-                        priority: 'Medium',
-                        isMilestone: addingMilestone
-                    })
+                    body: JSON.stringify(body)
                 });
 
                 if (res.ok) {
@@ -423,23 +545,31 @@
         gantt.attachEvent('onAfterTaskUpdate', async (id, task) => {
             if (suppressEvents || String(id).length > 10) return;
             const fmt = gantt.templates.format_date;
+            const body = {
+                title: task.text,
+                startDate: fmt(task.start_date),
+                progress: Math.round((task.progress ?? 0) * 100),
+                status: task.status || 'Open',
+                parentId: task.parent ? parseInt(task.parent) : null
+            };
+            // Meilensteine: EndDate mitsenden; Tasks: PlannedDuration
+            if (task.isMilestone) {
+                body.endDate = fmt(task.end_date);
+            } else if (task.plannedDuration) {
+                body.plannedDuration = task.plannedDuration;
+            }
             const res = await apiFetch(`/projects/${projectId}/tasks/${id}`, {
                 method: 'PUT',
-                body: JSON.stringify({
-                    title: task.text,
-                    startDate: fmt(task.start_date),
-                    endDate: fmt(task.end_date),
-                    progress: Math.round((task.progress ?? 0) * 100),
-                    status: task.status || 'Open'
-                })
+                body: JSON.stringify(body)
             });
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
                 if (data.error) {
                     gantt.message({ type: 'error', text: data.error, expire: 5000 });
                 }
-                await loadGantt();
             }
+            // Immer neu laden um berechnete Enddaten vom Server anzuzeigen
+            await loadGantt();
         });
 
         // Toolbar Buttons einfügen
@@ -447,15 +577,19 @@
             const actions = document.getElementById('toolbar-actions');
             if (currentRole !== 'Teacher') {
                 actions.insertAdjacentHTML('afterbegin', `
-                <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Aufgabe</button>
-                <button class="btn btn-white btn-sm" onclick="openAddModal(true)">🏁 Meilenstein</button>
-            `);
+                    <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Aufgabe</button>
+                    <button class="btn btn-white btn-sm" onclick="openAddModal(true)">🏁 Meilenstein</button>
+                `);
             }
         })();
 
         function openAddModal(milestone = false) {
             addingMilestone = milestone;
             document.getElementById('add-modal-title').textContent = milestone ? "Neuer Meilenstein" : "Neue Aufgabe";
+
+            // Meilenstein: Start+Ende, Task: Start+Dauer
+            document.getElementById('t-end-group').style.display = milestone ? '' : 'none';
+            document.getElementById('t-duration-group').style.display = milestone ? 'none' : '';
 
             // Datumsgrenzen zurücksetzen
             const startInput = document.getElementById('t-start');
@@ -474,8 +608,6 @@
                         const minD = fmt(parent.start_date);
                         const maxD = fmt(parent.end_date);
                         startInput.min = minD; startInput.max = maxD;
-                        endInput.min = minD; endInput.max = maxD;
-                        // Hinweistext
                         const fmtDE = gantt.date.date_to_str('%d.%m.%Y');
                         document.getElementById('msg-add-task').style.color = '#1e40af';
                         document.getElementById('msg-add-task').textContent =
@@ -554,7 +686,13 @@
         }
 
         // Task Info anzeigen und Edit-Tab befüllen
-        gantt.attachEvent("onTaskClick", function (id) {
+        gantt.attachEvent("onTaskClick", function (id, e) {
+            // Klick auf Aufklapp-Pfeil → nur auf-/zuklappen, kein Detail-Panel
+            var target = e.target || e.srcElement;
+            if (target && (target.classList.contains('gantt_tree_icon') || target.classList.contains('gantt_open') || target.classList.contains('gantt_close'))) {
+                return true;
+            }
+
             const task = gantt.getTask(id);
             currentTaskId = task.id;
 
@@ -562,6 +700,16 @@
             document.getElementById('dp-title').textContent = task.text;
             document.getElementById('dp-dates').textContent =
                 `${gantt.date.date_to_str('%d.%m.%Y')(task.start_date)} - ${gantt.date.date_to_str('%d.%m.%Y')(task.end_date)}`;
+
+            // Dauer anzeigen
+            const dpDurRow = document.getElementById('dp-duration-row');
+            const dpDur = document.getElementById('dp-duration');
+            if (task.plannedDuration && !task.isMilestone) {
+                dpDur.textContent = task.plannedDuration + ' Stunden';
+                dpDurRow.style.display = '';
+            } else {
+                dpDurRow.style.display = 'none';
+            }
 
             const pct = Math.round((task.progress || 0) * 100);
             const dpProg = document.getElementById('dp-progress');
@@ -589,6 +737,43 @@
             document.getElementById('et-progress-label').textContent = pct + '%';
             document.getElementById('msg-edit-task').textContent = '';
 
+            // Meilenstein: Start+Ende, Task: Start+Dauer
+            const isMsEdit = !!task.isMilestone;
+            document.getElementById('et-end-group').style.display = isMsEdit ? '' : 'none';
+            document.getElementById('et-duration-group').style.display = isMsEdit ? 'none' : '';
+
+            // Datums-Felder befüllen
+            const fmtISO = gantt.date.date_to_str('%Y-%m-%d');
+            document.getElementById('et-start').value = fmtISO(task.start_date);
+            document.getElementById('et-end').value = fmtISO(task.end_date);
+
+            // Dauer befüllen
+            document.getElementById('et-duration').value = task.plannedDuration || '';
+
+            // Berechnetes Ende anzeigen (für Tasks)
+            const calcEndEl = document.getElementById('et-calculated-end');
+            if (!isMsEdit) {
+                const fmtDE = gantt.date.date_to_str('%d.%m.%Y');
+                calcEndEl.textContent = '📅 Berechnetes Ende: ' + fmtDE(task.end_date);
+            } else {
+                calcEndEl.textContent = '';
+            }
+
+            // Min/Max auf Meilenstein-Grenzen setzen
+            const etStart = document.getElementById('et-start');
+            const hintEl = document.getElementById('et-date-hint');
+            etStart.min = ''; etStart.max = '';
+            hintEl.textContent = '';
+
+            const parentMs = getParentMilestone(task.id);
+            if (parentMs) {
+                const msMin = fmtISO(parentMs.start_date);
+                const msMax = fmtISO(parentMs.end_date);
+                etStart.min = msMin; etStart.max = msMax;
+                const fmtDE2 = gantt.date.date_to_str('%d.%m.%Y');
+                hintEl.textContent = '⏱ Meilenstein: ' + fmtDE2(parentMs.start_date) + ' – ' + fmtDE2(parentMs.end_date);
+            }
+
             document.getElementById('detail-panel').classList.add('open');
             return true;
         });
@@ -610,8 +795,7 @@
             const container = document.getElementById('assignments-list');
 
             if (assignments.length === 0) {
-                container.innerHTML = '<div style="color: var(--gray-600); font-style: italic;">Keine Zuweisungen</div>';
-                // Alle User wieder aktivieren im Dropdown
+                container.innerHTML = '<div style="color: var(--gray-500); font-style: italic; text-align:center; padding:1.5rem 0; font-size:0.9rem;">👤 Noch keine Zuweisungen</div>';
                 updateAssignUserDropdown([]);
                 return;
             }
@@ -619,35 +803,48 @@
             const totalPercentage = assignments.reduce((sum, a) => sum + (a.percentage || a.Percentage || 0), 0);
             const isValid = totalPercentage <= 100;
             const barWidth = Math.min(totalPercentage, 100);
+            const barColor = isValid ? '#22c55e' : '#ef4444';
 
             container.innerHTML = `
-          <div style="margin-bottom: 0.75rem;">
-            <div style="font-size: 0.85rem; color: var(--gray-600); margin-bottom: 0.25rem;">
-              Gesamtauslastung: <strong style="color: ${isValid ? 'var(--success)' : 'var(--danger)'};">${totalPercentage}%</strong>
-              ${!isValid ? '<span style="color: var(--danger);">⚠️ Über 100%!</span>' : ''}
-            </div>
-            <div style="background: var(--gray-200); height: 8px; border-radius: 4px; overflow: hidden;">
-              <div style="background: ${isValid ? 'var(--success)' : 'var(--danger)'}; height: 100%; width: ${barWidth}%; transition: width 0.3s;"></div>
-            </div>
-          </div>
-          ${assignments.map(a => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--gray-50); border-radius: 4px; margin-bottom: 0.5rem;" id="assign-row-${a.Id}">
-              <div style="flex: 1;">
-                <strong>${esc(a.userName)}</strong>
-                ${a.userShortName ? `<code style="margin-left: 0.5rem; background: var(--gray-200); padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">${esc(a.userShortName)}</code>` : ''}
-                <div style="display:flex; align-items:center; gap:0.5rem; margin-top: 0.3rem;">
-                  <input type="number" min="1" max="100" value="${a.percentage ?? a.Percentage}"
-                    style="width:60px; padding:3px 6px; border:1px solid var(--gray-300); border-radius:4px; font-size:0.85rem;"
-                    onchange="updateAssignment(${a.Id}, this.value)">
-                  <span style="font-size:0.82rem; color:var(--gray-600);">% Arbeitsanteil</span>
+              <div style="margin-bottom: 0.75rem; background:#f8fafc; border-radius:8px; padding:0.6rem 0.75rem; border:1px solid var(--gray-200);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                  <span style="font-size:0.8rem; color:var(--gray-500); font-weight:600;">Auslastung</span>
+                  <span style="font-size:0.85rem; font-weight:700; color:${barColor};">
+                    ${totalPercentage}%${!isValid ? ' ⚠️' : ''}
+                  </span>
+                </div>
+                <div style="background:#e2e8f0; height:6px; border-radius:3px; overflow:hidden;">
+                  <div style="background:${barColor}; height:100%; width:${barWidth}%; transition:width 0.3s; border-radius:3px;"></div>
                 </div>
               </div>
-              <button class="btn btn-sm btn-danger" onclick="removeAssignment(${a.Id})" style="font-size: 0.85rem; margin-left:0.5rem;">🗑️</button>
-            </div>
-          `).join('')}
-        `;
+              ${assignments.map(a => {
+                var aid = a.id !== undefined ? a.id : a.Id;
+                var pct = a.percentage !== undefined ? a.percentage : a.Percentage;
+                var initials = (a.userShortName || a.userName || '??').substring(0, 2).toUpperCase();
+                return `
+                <div style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; background:#fff; border-radius:8px; margin-bottom:0.5rem; border:1px solid var(--gray-200); transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
+                  <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; flex-shrink:0;">${initials}</div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:0.85rem; font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(a.userName)}</div>
+                    <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.25rem;">
+                      <input type="number" min="1" max="100" value="${pct}" id="pct-input-${aid}"
+                        style="width:52px; padding:3px 5px; border:1px solid var(--gray-300); border-radius:5px; font-size:0.82rem; text-align:center; background:#f8fafc;"
+                        onkeydown="if(event.key==='Enter'){updateAssignment(${aid}, this.value);}">
+                      <span style="font-size:0.78rem; color:var(--gray-400);">%</span>
+                      <button onclick="updateAssignment(${aid}, document.getElementById('pct-input-${aid}').value)"
+                        title="Speichern"
+                        style="width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; background:#e0e7ff; border:1px solid #c7d2fe; border-radius:6px; cursor:pointer; font-size:0.75rem; transition:background .15s; flex-shrink:0;"
+                        onmouseover="this.style.background='#c7d2fe'" onmouseout="this.style.background='#e0e7ff'">✓</button>
+                      <button onclick="removeAssignment(${aid})"
+                        title="Entfernen"
+                        style="width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; background:#fee2e2; border:1px solid #fecaca; border-radius:6px; cursor:pointer; font-size:0.75rem; transition:background .15s; flex-shrink:0;"
+                        onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">✕</button>
+                    </div>
+                  </div>
+                </div>`;
+            }).join('')}
+            `;
 
-            // Bereits zugewiesene User im Dropdown deaktivieren
             updateAssignUserDropdown(assignments.map(a => a.userId || a.UserId));
         }
 
@@ -746,26 +943,54 @@
             const title = document.getElementById('et-title').value.trim();
             const status = document.getElementById('et-status').value;
             const progress = parseInt(document.getElementById('et-progress').value, 10);
+            const startDate = document.getElementById('et-start').value;
+            const endDate = document.getElementById('et-end').value;
+            const duration = document.getElementById('et-duration').value;
             const msgEl = document.getElementById('msg-edit-task');
 
             if (!title) { msgEl.textContent = 'Name darf nicht leer sein.'; return; }
+            if (!startDate) { msgEl.textContent = 'Startdatum muss gesetzt sein.'; return; }
 
-            // Aktuellen Task aus Gantt holen (für Datumswerte)
             const task = gantt.getTask(id);
-            const fmt = gantt.templates.format_date;
+            const isMsEdit = !!task.isMilestone;
+
+            if (isMsEdit && !endDate) { msgEl.textContent = 'Enddatum muss gesetzt sein.'; return; }
+            if (isMsEdit && startDate > endDate) { msgEl.textContent = 'Start darf nicht nach Ende liegen.'; return; }
+            if (!isMsEdit && !duration) { msgEl.textContent = 'Dauer in Stunden muss angegeben werden.'; return; }
+
+            // Meilenstein-Grenzen prüfen (Client-seitig)
+            const parentMs = getParentMilestone(id);
+            if (parentMs) {
+                const fmtISO = gantt.date.date_to_str('%Y-%m-%d');
+                const msMin = fmtISO(parentMs.start_date);
+                const msMax = fmtISO(parentMs.end_date);
+                if (startDate < msMin) {
+                    const fmtDE = gantt.date.date_to_str('%d.%m.%Y');
+                    msgEl.textContent = 'Startdatum muss innerhalb des Meilensteins liegen (ab ' + fmtDE(parentMs.start_date) + ').';
+                    return;
+                }
+            }
+
+            const body = {
+                title,
+                startDate,
+                progress,
+                status,
+                priority: task.priority || 'Medium',
+                isMilestone: isMsEdit,
+                parentId: task.parent ? parseInt(task.parent) : null
+            };
+
+            if (isMsEdit) {
+                body.endDate = endDate;
+            } else {
+                body.plannedDuration = parseFloat(duration);
+            }
 
             try {
                 const res = await apiFetch(`/projects/${projectId}/tasks/${id}`, {
                     method: 'PUT',
-                    body: JSON.stringify({
-                        title,
-                        startDate: fmt(task.start_date),
-                        endDate: fmt(task.end_date),
-                        progress,
-                        status,
-                        priority: task.priority || 'Medium',
-                        isMilestone: !!task.isMilestone
-                    })
+                    body: JSON.stringify(body)
                 });
 
                 if (res.ok) {
@@ -838,13 +1063,13 @@
                     hour: '2-digit', minute: '2-digit'
                 });
                 return `
-            <div class="comment-item" style="background: var(--gray-50); padding: 0.6rem 0.8rem; border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid var(--primary);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <strong style="font-size: 0.85rem;">${esc(c.authorName)}</strong>
-                <span style="font-size: 0.75rem; color: var(--gray-500);">${date}</span>
-              </div>
-              <div style="font-size: 0.88rem; white-space: pre-wrap;">${esc(c.text)}</div>
-            </div>`;
+                <div class="comment-item" style="background: var(--gray-50); padding: 0.6rem 0.8rem; border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid var(--primary);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <strong style="font-size: 0.85rem;">${esc(c.authorName)}</strong>
+                    <span style="font-size: 0.75rem; color: var(--gray-500);">${date}</span>
+                  </div>
+                  <div style="font-size: 0.88rem; white-space: pre-wrap;">${esc(c.text)}</div>
+                </div>`;
             }).join('');
             // Scroll nach unten
             listEl.scrollTop = listEl.scrollHeight;

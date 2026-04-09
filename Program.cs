@@ -12,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ── Oracle Datenbank ────────────────────────────────────────────────────────────
 // SECURITY FIX: Read connection string from environment or config
-var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") 
+var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
     ?? builder.Configuration.GetConnectionString("Default");
 
 if (string.IsNullOrEmpty(connectionString) && builder.Environment.IsProduction())
@@ -28,18 +28,18 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 // SECURITY FIX: Increased password requirements
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
-    options.Password.RequireDigit           = true;
-    options.Password.RequiredLength         = 12;                    // INCREASED from 6
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = true;                  // CHANGED: now required
-    options.Password.RequireUppercase       = true;                  // CHANGED: now required
-    options.Password.RequireLowercase       = true;                  // NEW: Added
+    options.Password.RequireUppercase = true;                  // CHANGED: now required
+    options.Password.RequireLowercase = true;                  // NEW: Added
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
 // ── JWT Authentication ───────────────────────────────────────────────────────────
 // SECURITY FIX: Use environment variable for JWT secret
-var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
+var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
     ?? builder.Configuration["Jwt:Key"];
 
 // SECURITY FIX: Production safety check
@@ -51,27 +51,28 @@ if (builder.Environment.IsProduction() && string.IsNullOrEmpty(Environment.GetEn
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer           = true,
-        ValidateAudience         = true,
-        ValidateLifetime         = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer              = builder.Configuration["Jwt:Issuer"],
-        ValidAudience            = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
     };
-    
+
     // SECURITY FIX: Removed query string token reading
     // Prevents sensitive tokens from being logged in server logs and browser history
 });
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<ProjectPlanner.Services.PlanningService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -89,15 +90,15 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
-    
+
     // Production policy - use environment variable for allowed origins
-    var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") 
+    var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")
         ?? "https://projectplanner-cjcvhqc0creuhcc0.westeurope-01.azurewebsites.net";
-    
+
     var origins = allowedOrigins.Split(",", StringSplitOptions.RemoveEmptyEntries)
         .Select(o => o.Trim())
         .ToArray();
-    
+
     options.AddPolicy("ProductionPolicy", policy =>
         policy
             .WithOrigins(origins)
@@ -132,13 +133,13 @@ using (var scope = app.Services.CreateScope())
     {
         db.WorkSchedules.Add(new ProjectPlanner.Models.WorkSchedule
         {
-            Name           = "Standard-Woche (Mo–Fr)",
-            ProjectId      = null,
-            WorkDaysMask   = 62,
+            Name = "Standard-Woche (Mo–Fr)",
+            ProjectId = null,
+            WorkDaysMask = 62,
             DailyStartTime = "08:00",
-            DailyEndTime   = "17:00",
-            DailyHours     = 8,
-            IsDefault      = true
+            DailyEndTime = "17:00",
+            DailyHours = 8,
+            IsDefault = true
         });
         await db.SaveChangesAsync();
     }

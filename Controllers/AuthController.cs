@@ -13,21 +13,21 @@ namespace ProjectPlanner.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly UserManager<AppUser>      _userManager;
+    private readonly UserManager<AppUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly JwtService                _jwt;
-    private readonly AppDbContext              _db;
+    private readonly JwtService _jwt;
+    private readonly AppDbContext _db;
 
     public AuthController(
-        UserManager<AppUser>      userManager,
+        UserManager<AppUser> userManager,
         RoleManager<IdentityRole> roleManager,
-        JwtService                jwt,
-        AppDbContext              db)
+        JwtService jwt,
+        AppDbContext db)
     {
         _userManager = userManager;
         _roleManager = roleManager;
-        _jwt         = jwt;
-        _db          = db;
+        _jwt = jwt;
+        _db = db;
     }
 
     // ── Login ──────────────────────────────────────────────────────────────
@@ -44,9 +44,9 @@ public class AuthController : ControllerBase
 
         return Ok(new
         {
-            token              = _jwt.GenerateToken(user),
+            token = _jwt.GenerateToken(user),
             mustChangePassword = user.MustChangePassword,
-            privacyAccepted    = user.PrivacyAccepted
+            privacyAccepted = user.PrivacyAccepted
         });
     }
 
@@ -61,15 +61,15 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Benutzer-ID nicht gefunden" });
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null) 
+        if (user == null)
             return NotFound(new { error = "Benutzer nicht gefunden" });
 
         // ✅ FIX: Validate password inputs
         if (string.IsNullOrWhiteSpace(dto.CurrentPassword) || string.IsNullOrWhiteSpace(dto.NewPassword))
             return BadRequest(new { error = "Passwörter dürfen nicht leer sein" });
 
-        if (dto.NewPassword.Length < 12)
-            return BadRequest(new { error = "Neues Passwort muss mindestens 12 Zeichen lang sein" });
+        if (dto.NewPassword.Length < 6)
+            return BadRequest(new { error = "Neues Passwort muss mindestens 6 Zeichen lang sein" });
 
         if (!Regex.IsMatch(dto.NewPassword, @"[A-Z]"))
             return BadRequest(new { error = "Passwort muss mindestens einen Großbuchstaben enthalten" });
@@ -96,10 +96,10 @@ public class AuthController : ControllerBase
         user.MustChangePassword = false;
         await _userManager.UpdateAsync(user);
 
-        return Ok(new 
-        { 
+        return Ok(new
+        {
             message = "Passwort erfolgreich geändert.",
-            token = _jwt.GenerateToken(user) 
+            token = _jwt.GenerateToken(user)
         });
     }
 
@@ -114,7 +114,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Benutzer-ID nicht gefunden" });
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null) 
+        if (user == null)
             return NotFound(new { error = "Benutzer nicht gefunden" });
 
         user.PrivacyAccepted = true;
@@ -122,11 +122,11 @@ public class AuthController : ControllerBase
 
         _db.PrivacyConsents.Add(new PrivacyConsent
         {
-            UserId     = user.Id,
+            UserId = user.Id,
             AcceptedAt = DateTime.UtcNow,
-            IpAddress  = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
-            Version    = "1.0",
-            Accepted   = true
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            Version = "1.0",
+            Accepted = true
         });
         await _db.SaveChangesAsync();
 
@@ -144,7 +144,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Benutzer-ID nicht gefunden" });
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null) 
+        if (user == null)
             return NotFound(new { error = "Benutzer nicht gefunden" });
 
         return Ok(new
@@ -183,7 +183,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { error = "Benutzer-ID erforderlich" });
 
         var user = await _userManager.FindByIdAsync(dto.UserId);
-        if (user == null) 
+        if (user == null)
             return NotFound(new { error = "Benutzer nicht gefunden" });
 
         // ✅ FIX: Prevent removing last admin
@@ -191,7 +191,7 @@ public class AuthController : ControllerBase
         {
             var admins = await _userManager.GetUsersInRoleAsync("Admin");
             var adminCount = admins.Count;
-            
+
             var currentRoles = await _userManager.GetRolesAsync(user);
             if (currentRoles.Contains("Admin") && adminCount <= 1)
                 return BadRequest(new { error = "Der letzte Administrator kann nicht entfernt werden!" });
@@ -240,24 +240,25 @@ public class AuthController : ControllerBase
 
         var user = new AppUser
         {
-            UserName           = dto.Email,
-            Email              = dto.Email,
-            FullName           = dto.FullName,
-            ShortName          = dto.ShortName ?? "",
-            HourlyRate         = dto.HourlyRate ?? 0,
-            Role               = dto.Role,
+            UserName = dto.Email,
+            Email = dto.Email,
+            FullName = dto.FullName,
+            ShortName = dto.ShortName ?? "",
+            HourlyRate = dto.HourlyRate ?? 0,
+            Role = dto.Role,
             MustChangePassword = true,
-            PrivacyAccepted    = false
+            PrivacyAccepted = false
         };
 
-        var defaultPassword = "Schule" + DateTime.Now.Year + "!";
+        var defaultPassword = "!Schule" + DateTime.Now.Year + "!";
         var result = await _userManager.CreateAsync(user, defaultPassword);
-        
+
         // ✅ FIX: Better error handling
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            return BadRequest(new { 
+            return BadRequest(new
+            {
                 error = "Benutzer konnte nicht erstellt werden",
                 details = errors
             });
@@ -268,10 +269,44 @@ public class AuthController : ControllerBase
 
         return Ok(new
         {
-            message            = $"Benutzer '{dto.FullName}' erfolgreich angelegt.",
-            userId             = user.Id,
+            message = $"Benutzer '{dto.FullName}' erfolgreich angelegt.",
+            userId = user.Id,
             defaultPassword,
             mustChangePassword = true
+        });
+    }
+
+    // ── Passwort eines Benutzers zurücksetzen (nur Admin) ──────────────────
+    [HttpPost("reset-password")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.UserId))
+            return BadRequest(new { error = "Benutzer-ID erforderlich" });
+
+        var user = await _userManager.FindByIdAsync(dto.UserId);
+        if (user == null)
+            return NotFound(new { error = "Benutzer nicht gefunden" });
+
+        var defaultPassword = "!Schule" + DateTime.Now.Year + "!";
+
+        // Passwort über Token-Mechanismus zurücksetzen
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, defaultPassword);
+
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return BadRequest(new { error = "Passwort konnte nicht zurückgesetzt werden", details = errors });
+        }
+
+        user.MustChangePassword = true;
+        await _userManager.UpdateAsync(user);
+
+        return Ok(new
+        {
+            message = $"Passwort von '{user.FullName}' wurde zurückgesetzt.",
+            defaultPassword
         });
     }
 
@@ -286,3 +321,4 @@ public record LoginDto(string Email, string Password);
 public record SetRoleDto(string UserId, string Role);
 public record ChangePasswordDto(string CurrentPassword, string NewPassword);
 public record CreateUserDto(string Email, string FullName, string Role, string? ShortName = null, decimal? HourlyRate = null);
+public record ResetPasswordDto(string UserId);
