@@ -8,45 +8,55 @@ using ProjectPlanner.Models;
 using ProjectPlanner.Services;
 using System.Text;
 
+// 🔥 .env laden
+DotNetEnv.Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Oracle Datenbank ────────────────────────────────────────────────────────────
-// SECURITY FIX: Read connection string from environment or config
-var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") 
+// ─────────────────────────────────────────────
+// 🔐 ENV / CONFIG
+// ─────────────────────────────────────────────
+
+var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? builder.Configuration["Jwt:Key"];
+
+var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
     ?? builder.Configuration.GetConnectionString("Default");
 
-if (string.IsNullOrEmpty(connectionString) && builder.Environment.IsProduction())
-{
-    throw new InvalidOperationException("DB_CONNECTION_STRING environment variable must be set in production!");
-}
+var allowedOriginsEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") ?? "";
+
+if (string.IsNullOrEmpty(jwtKey))
+    throw new InvalidOperationException("JWT key not configured!");
+
+if (string.IsNullOrEmpty(connectionString))
+    throw new InvalidOperationException("Database connection string not configured!");
+
+// ─────────────────────────────────────────────
+// 🛢 DATABASE
+// ─────────────────────────────────────────────
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseOracle(connectionString,
         b => b.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19)));
 
-// ── ASP.NET Identity (mit RoleManager) ───────────────────────────────────────
-// SECURITY FIX: Increased password requirements
+// ─────────────────────────────────────────────
+// 👤 IDENTITY
+// ─────────────────────────────────────────────
+
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit           = true;
-    options.Password.RequiredLength         = 12;                    // INCREASED from 6
-    options.Password.RequireNonAlphanumeric = true;                  // CHANGED: now required
-    options.Password.RequireUppercase       = true;                  // CHANGED: now required
-    options.Password.RequireLowercase       = true;                  // NEW: Added
+    options.Password.RequiredLength         = 12;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase       = true;
+    options.Password.RequireLowercase       = true;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// ── JWT Authentication ───────────────────────────────────────────────────────────
-// SECURITY FIX: Use environment variable for JWT secret
-var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
-    ?? builder.Configuration["Jwt:Key"];
-
-// SECURITY FIX: Production safety check
-if (builder.Environment.IsProduction() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET_KEY")))
-{
-    throw new InvalidOperationException("CRITICAL: JWT_SECRET_KEY environment variable must be set in production!");
-}
+// ─────────────────────────────────────────────
+// 🔐 JWT AUTH
+// ─────────────────────────────────────────────
 
 builder.Services.AddAuthentication(options =>
 {
@@ -63,74 +73,104 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer              = builder.Configuration["Jwt:Issuer"],
         ValidAudience            = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
+        IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
-    
-    // SECURITY FIX: Removed query string token reading
-    // Prevents sensitive tokens from being logged in server logs and browser history
 });
 
+// ─────────────────────────────────────────────
+// 🔒 AUTHORIZATION
+// ─────────────────────────────────────────────
+
 builder.Services.AddAuthorization();
+
+// ─────────────────────────────────────────────
+// 🧠 SERVICES
+// ─────────────────────────────────────────────
+
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-
-// ── OpenAPI / Swagger ────────────────────────────────────────────────────────────
 builder.Services.AddSwaggerGen();
 
-// ── CORS Configuration ───────────────────────────────────────────────────────────
-// SECURITY FIX: Proper CORS policy with restricted origins
+// ─────────────────────────────────────────────
+// 🌍 CORS
+// ─────────────────────────────────────────────
+
+var origins = allowedOriginsEnv
+    .Split(",", StringSplitOptions.RemoveEmptyEntries)
+    .Select(o => o.Trim())
+    .ToArray();
+
 builder.Services.AddCors(options =>
 {
-    // Development policy - for localhost only
-    options.AddPolicy("DevPolicy", policy =>
-        policy
-            .WithOrigins("http://localhost:3000", "http://localhost:5000", "https://localhost:5001")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials());
-    
-    // Production policy - use environment variable for allowed origins
-    var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") 
-        ?? "https://projectplanner-cjcvhqc0creuhcc0.westeurope-01.azurewebsites.net";
-    
-    var origins = allowedOrigins.Split(",", StringSplitOptions.RemoveEmptyEntries)
-        .Select(o => o.Trim())
-        .ToArray();
-    
-    options.AddPolicy("ProductionPolicy", policy =>
-        policy
-            .WithOrigins(origins)
-            .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-            .WithHeaders("Content-Type", "Authorization")
-            .AllowCredentials());
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        if (origins.Length > 0)
+            policy.WithOrigins(origins);
+        else
+            policy.AllowAnyOrigin(); // fallback (nur dev!)
+
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
 });
 
-// ── Rate Limiting (manuell ohne externe Library) ──────────────────────────────────
-// SECURITY FIX: Prevent brute force attacks
+// ─────────────────────────────────────────────
+// 🛡 RATE LIMITING
+// ─────────────────────────────────────────────
+
 var rateLimitStore = new Dictionary<string, List<DateTime>>();
 builder.Services.AddSingleton(rateLimitStore);
 
 var app = builder.Build();
 
-// ── Rate Limiting Middleware ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// 🚦 MIDDLEWARE
+// ─────────────────────────────────────────────
+
 app.UseRateLimiting();
 
-// ── Rollen beim Start sicherstellen ──────────────────────────────────────────
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/openapi/v1.json", "ProjectPlanner API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
+
+// 🌍 CORS
+app.UseCors("CorsPolicy");
+
+// 📁 Static files
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+// 🔐 Auth
+app.UseAuthentication();
+app.UseAuthorization();
+
+// ─────────────────────────────────────────────
+// 👑 ROLES & SEEDING
+// ─────────────────────────────────────────────
+
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
     foreach (var role in new[] { "Admin", "Teacher", "Student" })
     {
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole(role));
     }
 
-    // Standard-Arbeitszeitplan anlegen wenn noch keiner existiert
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
     if (!await db.WorkSchedules.AnyAsync())
     {
-        db.WorkSchedules.Add(new ProjectPlanner.Models.WorkSchedule
+        db.WorkSchedules.Add(new WorkSchedule
         {
             Name           = "Standard-Woche (Mo–Fr)",
             ProjectId      = null,
@@ -140,33 +180,16 @@ using (var scope = app.Services.CreateScope())
             DailyHours     = 8,
             IsDefault      = true
         });
+
         await db.SaveChangesAsync();
     }
 }
 
-// ── Middleware Pipeline ───────────────────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/openapi/v1.json", "ProjectPlanner API v1");
-        c.RoutePrefix = "swagger";
-    });
-    app.UseCors("DevPolicy");
-}
-else
-{
-    // SECURITY FIX: Apply production CORS policy in production
-    app.UseCors("ProductionPolicy");
-}
+// ─────────────────────────────────────────────
+// 🧭 ROUTING
+// ─────────────────────────────────────────────
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
-app.UseAuthentication();
-app.UseAuthorization();
 app.MapControllers();
-
 app.MapFallbackToFile("index.html");
 
 app.Run();

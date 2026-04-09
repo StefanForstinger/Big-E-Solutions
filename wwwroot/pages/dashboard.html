@@ -273,7 +273,7 @@
   function renderProjects(projects) {
     const grid = document.getElementById('project-grid');
     grid.innerHTML = projects.map(p => {
-      const start = p.startDate?.slice(0,10) ?? '';
+      const start = p.startDate?.slice(0 ,10) ?? '';
       const end = p.endDate?.slice(0,10) ?? '';
       const canManage = (p.ownerId === currentUser?.nameid || currentRole === 'Admin');
 
@@ -361,11 +361,59 @@
     }
   }
 
-  /* --- Exports --- */
-  function exportProjectExcel(id) { window.location.href = `/api/export/excel/${id}?token=${getToken()}`; }
-  function exportProjectPdf(id) { window.location.href = `/api/export/pdf/${id}?token=${getToken()}`; }
-  function exportAllExcel() { window.location.href = `/api/export/excel?token=${getToken()}`; }
-  function exportAllPdf() { window.location.href = `/api/export/pdf?token=${getToken()}`; }
+  /* --- Export Helpers --- */
+  async function downloadFile(url, filenameFallback) {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Authorization": "Bearer " + getToken()
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`Download failed (${res.status})`);
+      }
+
+      const blob = await res.blob();
+
+      // Try to extract filename from header
+      let filename = filenameFallback;
+      const disposition = res.headers.get("Content-Disposition");
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?(.+?)"?$/);
+        if (match) filename = match[1];
+      }
+
+      const urlBlob = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = urlBlob;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(urlBlob);
+
+    } catch (err) {
+      console.error(err);
+      alert("Export fehlgeschlagen.");
+    }
+  }
+  function exportProjectExcel(id) {
+    downloadFile(`/api/export/excel/${id}`, `project_${id}.xlsx`);
+  }
+
+  function exportProjectPdf(id) {
+    downloadFile(`/api/export/pdf/${id}`, `project_${id}.pdf`);
+  }
+  function exportAllExcel() {
+    downloadFile(`/api/export/excel`, `all_projects.xlsx`);
+  }
+
+  function exportAllPdf() {
+    downloadFile(`/api/export/pdf`, `all_projects.pdf`);
+  }
 
   /* --- Helpers --- */
   function openEdit(id) {

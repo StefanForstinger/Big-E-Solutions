@@ -11,9 +11,9 @@
   <nav class="navbar">
     <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
     <div class="navbar-right">
-      <div style="display: flex; align-items: center; gap: 1rem; margin-right: 1rem;">
-        <a href="/pages/user-management.html" class="btn btn-outline btn-sm" style="background: var(--accent); color: white; border-color: var(--accent);">👥 Benutzer</a>
-      </div>
+<!--      <div style="display: flex; align-items: center; gap: 1rem; margin-right: 1rem;">-->
+<!--        <a href="/pages/user-management.html" class="btn btn-outline btn-sm" style="background: var(&#45;&#45;accent); color: white; border-color: var(&#45;&#45;accent);">👥 Benutzer</a>-->
+<!--      </div>-->
       <span class="navbar-user" id="nav-user"></span>
       <span class="role-badge" id="nav-role"></span>
       <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
@@ -143,6 +143,10 @@
   </div>
 
   <style>
+    .role-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:.76em; font-weight:700; letter-spacing:.02em; }
+    .role-admin   { background:#fee2e2; color:#b91c1c; }
+    .role-teacher { background:#fef3c7; color:#92400e; }
+    .role-student { background:#dbeafe; color:#1e40af; }
     .modal {
       position: fixed;
       top: 0;
@@ -221,44 +225,30 @@
     .table tbody tr:hover {
       background: var(--gray-50);
     }
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-    .badge-admin {
-      background: var(--danger-light);
-      color: var(--danger);
-    }
-    .badge-teacher {
-      background: var(--warning-light);
-      color: var(--warning);
-    }
-    .badge-student {
-      background: var(--success-light);
-      color: var(--success);
-    }
   </style>
 
   <script src="/js/api.js"></script>
   <script>
+    const currentRole = getUserRole();
     let currentUserId = null;
     let currentUserName = null;
 
-    // Check if user is admin and populate navbar
+    // // Check if user is admin and populate navbar
     async function checkAdmin() {
-      const user = await fetchMe();
-      if (!user || user.role !== 'Admin') {
-        window.location.href = '/pages/dashboard.html';
-      }
+    //   const user = await fetchMe();
+    //   if (!user || user.role !== 'Admin') {
+    //     window.location.href = '/pages/dashboard.html';
+    //   }
+    //wer des gmocht hod is a koffa
       
       // Populate navbar
-      document.getElementById('nav-user').textContent = user.fullName;
+      document.getElementById('nav-user').textContent = getUserName();
+
       const roleEl = document.getElementById('nav-role');
-      roleEl.textContent = user.role;
-      roleEl.className = 'role-badge role-' + user.role.toLowerCase();
+      const role = currentRole.toLowerCase();
+
+      roleEl.textContent = currentRole;
+      roleEl.className = `role-badge role-${role}`;
     }
 
     async function createUser() {
