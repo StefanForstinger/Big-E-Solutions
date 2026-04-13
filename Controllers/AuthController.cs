@@ -38,6 +38,10 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
             return BadRequest(new { error = "E-Mail und Passwort sind erforderlich" });
 
+        // ✅ FIX TF-02: Validate email format before hitting the DB
+        if (!Regex.IsMatch(dto.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            return BadRequest(new { error = "Ungültiges E-Mail-Format" });
+
         var user = await _userManager.FindByEmailAsync(dto.Email);
         if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
             return Unauthorized(new { error = "Ungültige Anmeldedaten" });
@@ -276,6 +280,52 @@ public class AuthController : ControllerBase
         });
     }
 
+    // ── Benutzerdaten bearbeiten (nur Admin) ────────────────────────────────
+    // FIX TF-07: Fehlender PUT-Endpoint für Name, Kürzel, Stundensatz
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateUser(string id, UpdateUserDto dto)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+            return NotFound(new { error = "Benutzer nicht gefunden" });
+
+        if (!string.IsNullOrWhiteSpace(dto.FullName))
+        {
+            if (dto.FullName.Length < 3)
+                return BadRequest(new { error = "Name muss mindestens 3 Zeichen lang sein" });
+            if (dto.FullName.Length > 100)
+                return BadRequest(new { error = "Name darf maximal 100 Zeichen lang sein" });
+            user.FullName = dto.FullName;
+        }
+
+        if (dto.ShortName != null)
+            user.ShortName = dto.ShortName;
+
+        if (dto.HourlyRate.HasValue)
+        {
+            if (dto.HourlyRate < 0 || dto.HourlyRate > 999.99m)
+                return BadRequest(new { error = "Stundensatz muss zwischen 0 und 999,99€ liegen" });
+            user.HourlyRate = dto.HourlyRate.Value;
+        }
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return BadRequest(new { error = "Benutzer konnte nicht aktualisiert werden", details = errors });
+        }
+
+        return Ok(new
+        {
+            message = $"Benutzer '{user.FullName}' erfolgreich aktualisiert.",
+            user.Id,
+            user.FullName,
+            user.ShortName,
+            user.HourlyRate
+        });
+    }
+
     // ── Passwort eines Benutzers zurücksetzen (nur Admin) ──────────────────
     [HttpPost("reset-password")]
     [Authorize(Roles = "Admin")]
@@ -322,3 +372,4 @@ public record SetRoleDto(string UserId, string Role);
 public record ChangePasswordDto(string CurrentPassword, string NewPassword);
 public record CreateUserDto(string Email, string FullName, string Role, string? ShortName = null, decimal? HourlyRate = null);
 public record ResetPasswordDto(string UserId);
+public record UpdateUserDto(string? FullName, string? ShortName, decimal? HourlyRate);

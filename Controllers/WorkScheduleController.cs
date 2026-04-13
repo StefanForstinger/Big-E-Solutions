@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectPlanner.Data;
 using ProjectPlanner.Models;
+using ProjectPlanner.Services;
 
 namespace ProjectPlanner.Controllers;
 
@@ -17,8 +18,14 @@ namespace ProjectPlanner.Controllers;
 public class WorkScheduleController : ControllerBase
 {
     private readonly AppDbContext _db;
+    // ✅ FIX TF-13: Inject PlanningService so schedule changes trigger recalculation
+    private readonly PlanningService _planning;
 
-    public WorkScheduleController(AppDbContext db) => _db = db;
+    public WorkScheduleController(AppDbContext db, PlanningService planning)
+    {
+        _db = db;
+        _planning = planning;
+    }
 
     // ── Alle Zeitpläne (global + projektspezifisch) ──────────────────────────
     [HttpGet]
@@ -85,6 +92,10 @@ public class WorkScheduleController : ControllerBase
         schedule.IsDefault      = dto.IsDefault;
 
         await _db.SaveChangesAsync();
+
+        // ✅ FIX TF-13: Recalculate all tasks affected by this schedule change
+        await RecalculateTasksForScheduleAsync(schedule);
+
         return Ok(schedule);
     }
 
@@ -99,6 +110,46 @@ public class WorkScheduleController : ControllerBase
         _db.WorkSchedules.Remove(schedule);
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    // ── Hilfsmethode: Alle Tasks nach Schedule-Änderung neu berechnen ────────
+    // FIX TF-13: Kaskadierung auslösen wenn Arbeitszeit geändert wird
+    private async Task RecalculateTasksForScheduleAsync(WorkSchedule schedule)
+    {
+        List<ProjectTask> tasksToRecalculate;
+
+        if (schedule.ProjectId.HasValue)
+        {
+            // Projektspezifischer Schedule: alle Tasks dieses Projekts neu berechnen
+            tasksToRecalculate = await _db.Tasks
+                .Where(t => t.ProjectId == schedule.ProjectId && !t.IsMilestone && t.PlannedDuration != null && t.PlannedDuration > 0)
+                .OrderBy(t => t.StartDate)
+                .ToListAsync();
+        }
+        else if (schedule.IsDefault)
+        {
+            // Globaler Default-Schedule: alle Projekte ohne eigenen projektspezifischen Schedule
+            var projectsWithOwnSchedule = await _db.WorkSchedules
+                .Where(ws => ws.ProjectId != null)
+                .Select(ws => ws.ProjectId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            tasksToRecalculate = await _db.Tasks
+                .Where(t => !projectsWithOwnSchedule.Contains(t.ProjectId)
+                            && !t.IsMilestone
+                            && t.PlannedDuration != null
+                            && t.PlannedDuration > 0)
+                .OrderBy(t => t.StartDate)
+                .ToListAsync();
+        }
+        else
+        {
+            return; // Nicht-default globaler Schedule: kein Projekt betroffen
+        }
+
+        foreach (var task in tasksToRecalculate)
+            await _planning.CalculateScheduleAsync(task);
     }
 
     // ── Hilfsmethode: Default-Flag bei anderen Zeitplänen entfernen ──────────
