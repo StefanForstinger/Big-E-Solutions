@@ -81,6 +81,9 @@ public class TaskController : ControllerBase
     [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> Create(int projectId, [FromBody] TaskDto dto)
     {
+        // ✅ FIX TF-28: Validate required fields before saving (returns 400 instead of 500)
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            return BadRequest(new { error = "Aufgabentitel darf nicht leer sein." });
         // Prüfen: Assignee muss Projektmitglied oder Owner sein
         string? resolvedAssigneeId = null;
         if (!string.IsNullOrEmpty(dto.AssigneeId))
@@ -93,6 +96,14 @@ public class TaskController : ControllerBase
         }
 
         var isMilestone = dto.IsMilestone ?? false;
+
+        // ✅ FIX TF-14/TF-19: If no StartDate provided (default 0001-01-01), use project's StartDate
+        var effectiveStartDate = dto.StartDate;
+        if (effectiveStartDate == default)
+        {
+            var project = await _db.Projects.FindAsync(projectId);
+            effectiveStartDate = project?.StartDate ?? DateTime.UtcNow.Date;
+        }
 
         // Für normale Tasks: Meilenstein-Grenzen nur auf StartDate prüfen (EndDate wird berechnet)
         if (dto.ParentId != null && !isMilestone)
@@ -108,8 +119,8 @@ public class TaskController : ControllerBase
         var task = new ProjectTask
         {
             Title = dto.Title,
-            StartDate = dto.StartDate,
-            EndDate = dto.EndDate ?? dto.StartDate, // Wird für Tasks durch PlanningService berechnet
+            StartDate = effectiveStartDate,
+            EndDate = dto.EndDate ?? effectiveStartDate, // Wird für Tasks durch PlanningService berechnet
             Progress = Math.Clamp(dto.Progress, 0, 100),
             ParentId = dto.ParentId,
             Priority = dto.Priority ?? "Medium",
