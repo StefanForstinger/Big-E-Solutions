@@ -36,13 +36,6 @@ public class ProjectTask
     /// <summary>Optionale Notiz / Kommentar</summary>
     public string? Note { get; set; }
 
-    /// <summary>DEPRECATED: Wird durch TaskAssignments ersetzt. Bleibt für Abwärtskompatibilität.</summary>
-    [Obsolete("Use TaskAssignments instead for multiple assignees with percentages")]
-    public string? AssigneeId { get; set; }
-    [JsonIgnore] 
-    [Obsolete("Use TaskAssignments instead")]
-    public AppUser? Assignee { get; set; }
-
     public int     ProjectId { get; set; }
     [JsonIgnore] public Project Project { get; set; } = null!;
 

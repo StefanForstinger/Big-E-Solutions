@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arbeitszeitdefinition – Projektplaner</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <style>
+    /* ── Navbar Buttons ─────────────────────────────────────────────────────── */
+    /* Sichtbare Navigationsbuttons auf dem dunklen Navbar-Hintergrund */
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .38rem .85rem;
+      border-radius: 6px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background var(--trans), color var(--trans), box-shadow var(--trans);
+      white-space: nowrap;
+      /* Volle Deckkraft, solider weißer Hintergrund */
+      background: rgba(255,255,255,.18);
+      color: var(--white);
+      border: 1.5px solid rgba(255,255,255,.55);
+      opacity: 1;
+    }
+    .btn-nav:hover {
+      background: rgba(255,255,255,.30);
+      border-color: rgba(255,255,255,.8);
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      color: var(--white);
+    }
+    /* Aktive Seite: klar sichtbar, Akzentfarbe */
+    .btn-nav.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--white);
+      box-shadow: 0 2px 8px rgba(45,156,219,.45);
+    }
+    .btn-nav.active:hover {
+      background: var(--accent-dk);
+      border-color: var(--accent-dk);
+    }
+    /* Icon-Emoji im Button: volle Deckkraft, passende Größe */
+    .btn-nav .nav-icon {
+      font-size: 1rem;
+      line-height: 1;
+      opacity: 1;
+    }
+
+    /* ── Page Layout ─────────────────────────────────────────────────────────── */
+    .page-wrapper   { max-width: 1100px; margin: 2rem auto; padding: 0 1rem 5rem; }
+    .page-header    { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap; }
+    .page-header h1 { margin-bottom: .25rem; }
+    .text-muted     { color: var(--gray-600); font-size: .9rem; }
+
+    /* ── Cards ───────────────────────────────────────────────────────────────── */
+    .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 1.5rem; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--gray-200); }
+    .card-header h2 { font-size: 1rem; margin: 0; }
+    .card-body  { padding: 1.25rem; }
+
+    /* ── Schedule List ───────────────────────────────────────────────────────── */
+    .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+
+    .schedule-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--accent);
+      overflow: hidden;
+      transition: box-shadow var(--trans), transform var(--trans);
+    }
+    .schedule-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+    .schedule-card.is-default { border-left-color: var(--green); }
+
+    .sc-head { display: flex; align-items: center; justify-content: space-between; padding: .85rem 1rem .5rem; }
+    .sc-title { font-weight: 700; font-size: .95rem; color: var(--navy); }
+    .sc-body  { padding: 0 1rem .75rem; }
+    .sc-row   { font-size: .83rem; color: var(--gray-600); margin-bottom: .2rem; }
+    .sc-row span { color: var(--gray-800); font-weight: 500; }
+    .sc-footer { padding: .65rem 1rem; border-top: 1px solid var(--gray-200); display: flex; gap: .5rem; justify-content: flex-end; }
+
+    /* ── Day-mask calendar strip ─────────────────────────────────────────────── */
+    .day-strip { display: flex; gap: 6px; margin: .6rem 0 .3rem; flex-wrap: wrap; }
+    .day-chip  {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      font-size: .78rem; font-weight: 700; letter-spacing: .01em;
+      background: var(--gray-200); color: var(--gray-600);
+    }
+    .day-chip.active { background: var(--accent); color: var(--white); }
+
+    /* ── Badge ───────────────────────────────────────────────────────────────── */
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: .73rem; font-weight: 700; }
+    .badge-default  { background: #d1fae5; color: #065f46; }
+    .badge-global   { background: #dbeafe; color: #1e40af; }
+    .badge-project  { background: #fef3c7; color: #92400e; }
+
+    /* ── Weekly Calendar Editor ──────────────────────────────────────────────── */
+    .week-selector { display: flex; gap: 8px; flex-wrap: wrap; margin: .5rem 0; }
+
+    .day-toggle {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 4px; cursor: pointer; user-select: none;
+    }
+    .day-toggle input[type="checkbox"] { display: none; }
+    .day-toggle .day-label {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .82rem; font-weight: 700;
+      background: var(--gray-200); color: var(--gray-600);
+      border: 2.5px solid transparent;
+      transition: all var(--trans);
+    }
+    .day-toggle input:checked + .day-label {
+      background: var(--accent); color: var(--white);
+      border-color: var(--accent-dk);
+      box-shadow: 0 2px 8px rgba(45,156,219,.4);
+    }
+    .day-toggle .day-name { font-size: .7rem; color: var(--gray-600); font-weight: 600; }
+
+    .time-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    @media (max-width: 540px) { .time-row { grid-template-columns: 1fr 1fr; } }
+
+    /* ── Empty state ─────────────────────────────────────────────────────────── */
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--gray-600); }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: .75rem; }
+
+    /* ── Modal ───────────────────────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 1000;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow-lg); width: min(520px, 95vw);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--gray-200); }
+    .modal-header h3 { font-size: 1rem; margin: 0; }
+    .modal-body   { padding: 1.25rem; }
+    .modal-footer { padding: .9rem 1.25rem; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: .6rem; }
+    .modal-close  { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray-600); line-height: 1; border-radius: 4px; padding: 2px 6px; }
+    .modal-close:hover { background: var(--gray-200); }
+
+    /* ── Alerts ──────────────────────────────────────────────────────────────── */
+    .alert { padding: .7rem 1rem; border-radius: 6px; font-size: .9rem; margin-top: .75rem; }
+    .alert-hidden  { display: none !important; }
+    .alert-error   { background: #fee2e2; color: #991b1b; }
+    .alert-success { background: #d1fae5; color: #065f46; }
+    .alert-info    { background: #dbeafe; color: #1e40af; }
+
+    /* ── Footer ──────────────────────────────────────────────────────────────── */
+    .auth-footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: .75rem 1rem; font-size: .8rem; color: rgba(255,255,255,.45); background: #1E3A5F; z-index: 100; }
+    .auth-footer a { color: rgba(255,255,255,.65); text-decoration: none; font-weight: 600; }
+    .auth-footer .sep { margin: 0 .5rem; opacity: .4; }
+
+    /* ── Info box ────────────────────────────────────────────────────────────── */
+    .info-box { background: #eff6ff; border-left: 4px solid var(--accent); border-radius: 6px; padding: .85rem 1rem; font-size: .88rem; color: var(--gray-800); margin-bottom: 1.5rem; }
+    .info-box strong { color: var(--navy); }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
+  <div class="navbar-right">
+    <div id="admin-nav-links" style="display:none; gap:.4rem; margin-right:.75rem; align-items:center;">
+      <a href="/pages/user-management.html" class="btn-nav">
+        <span class="nav-icon">👥</span> Benutzer
+      </a>
+      <a href="/pages/work-schedule.html" class="btn-nav active">
+        <span class="nav-icon">⏱</span> Arbeitszeit
+      </a>
+    </div>
+    <span class="navbar-user" id="nav-user"></span>
+    <span id="nav-role" class="badge" style="font-size:.75rem;"></span>
+    <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
+  </div>
+</nav>
+
+<!-- ── Page ────────────────────────────────────────────────────────────────── -->
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <h1>⏱ Arbeitszeitdefinition</h1>
+      <p class="text-muted">Definiere Arbeitstage und Stunden pro Tag als Berechnungsgrundlage für den Gantt-Planer</p>
+    </div>
+    <div id="admin-actions" style="display:none;">
+      <button class="btn btn-primary" onclick="openModal()">+ Neuer Zeitplan</button>
+    </div>
+  </div>
+
+  <!-- Info box -->
+  <div class="info-box">
+    <strong>ℹ️ Berechnungsgrundlage:</strong> Die hier definierten Arbeitspläne legen fest, welche Tage als Arbeitstage gelten und wie viele Stunden pro Tag gearbeitet wird. Der Planungsalgorithmus berechnet damit automatisch Aufgaben-Enddaten auf Basis der geplanten Stunden.
+  </div>
+
+  <!-- Schedule list -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Vorhandene Arbeitszeitpläne</h2>
+      <button class="btn btn-ghost btn-sm" onclick="loadSchedules()">🔄 Aktualisieren</button>
+    </div>
+    <div class="card-body">
+      <div id="schedules-loading" style="text-align:center;padding:2rem;color:var(--gray-600);">Lädt…</div>
+      <div id="schedules-grid"  class="schedule-grid" style="display:none;"></div>
+      <div id="schedules-empty" class="empty-state"   style="display:none;">
+        <div class="icon">📅</div>
+        <p>Noch keine Arbeitszeitpläne vorhanden.<br>Erstelle den ersten Plan über die Schaltfläche oben.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weekly calendar preview (read-only, largest schedule) -->
+  <div class="card" id="preview-card" style="display:none;">
+    <div class="card-header">
+      <h2>📋 Wochenvorschau – <span id="preview-title"></span></h2>
+    </div>
+    <div class="card-body" id="preview-body"></div>
+  </div>
+
+</div>
+
+<!-- ── Create / Edit Modal ──────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Neuer Arbeitszeitplan</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-group">
+        <label for="f-name">Name des Zeitplans</label>
+        <input id="f-name" type="text" placeholder="z.B. Standard-Woche Mo–Fr">
+      </div>
+
+      <div class="form-group">
+        <label>Arbeitstage</label>
+        <div class="week-selector" id="week-selector">
+          <!-- filled by JS -->
+        </div>
+      </div>
+
+      <div class="time-row">
+        <div class="form-group">
+          <label for="f-start">Arbeitsbeginn</label>
+          <input id="f-start" type="time" value="08:00">
+        </div>
+        <div class="form-group">
+          <label for="f-end">Arbeitsende</label>
+          <input id="f-end" type="time" value="17:00">
+        </div>
+        <div class="form-group">
+          <label for="f-hours">Stunden / Tag</label>
+          <input id="f-hours" type="number" min="0.5" max="24" step="0.5" value="8">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="f-project">Projekt (leer = globaler Plan)</label>
+        <select id="f-project">
+          <option value="">— Global (alle Projekte) —</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="display:flex;align-items:center;gap:.6rem;">
+        <input type="checkbox" id="f-default" style="width:16px;height:16px;margin:0;">
+        <label for="f-default" style="margin:0;cursor:pointer;">Als Standard-Zeitplan verwenden</label>
+      </div>
+
+      <div id="modal-alert" class="alert alert-hidden"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" id="btn-save" onclick="saveSchedule()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Footer ──────────────────────────────────────────────────────────────── -->
+<footer class="auth-footer">
+  © 2025 Projektplaner
+  <span class="sep">·</span><a href="/pages/impressum.html">Impressum</a>
+  <span class="sep">·</span><a href="/pages/datenschutz.html">Datenschutz</a>
+</footer>
+
+<script src="/js/api.js"></script>
+<script>
+  // ── Day configuration ──────────────────────────────────────────────────────
+  // Bitmask: So=1, Mo=2, Di=4, Mi=8, Do=16, Fr=32, Sa=64
+  const DAYS = [
+    { bit: 2,  label: 'Mo', name: 'Montag'     },
+    { bit: 4,  label: 'Di', name: 'Dienstag'   },
+    { bit: 8,  label: 'Mi', name: 'Mittwoch'   },
+    { bit: 16, label: 'Do', name: 'Donnerstag' },
+    { bit: 32, label: 'Fr', name: 'Freitag'    },
+    { bit: 64, label: 'Sa', name: 'Samstag'    },
+    { bit: 1,  label: 'So', name: 'Sonntag'    },
+  ];
+
+  let editId      = null;   // null = create, number = edit
+  let allSchedules = [];
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) { window.location.href = '/index.html'; return; }
+
+    const role = getUserRole();
+    document.getElementById('nav-user').textContent = getUserName();
+
+    const roleBadge = document.getElementById('nav-role');
+    roleBadge.textContent = role;
+    roleBadge.className   = 'badge ' + (role === 'Admin' ? 'badge-default' : role === 'Teacher' ? 'badge-project' : 'badge-global');
+
+    if (role === 'Admin') {
+      document.getElementById('admin-actions').style.display = 'block';
+      document.getElementById('admin-nav-links').style.display = 'flex';
+    }
+
+    buildWeekSelector();
+    loadProjects();
+    loadSchedules();
+  });
+
+  // ── Build week-day toggles in modal ────────────────────────────────────────
+  function buildWeekSelector() {
+    const container = document.getElementById('week-selector');
+    container.innerHTML = '';
+    DAYS.forEach(d => {
+      const label = document.createElement('label');
+      label.className = 'day-toggle';
+      label.innerHTML = `
+        <input type="checkbox" id="day-${d.bit}" value="${d.bit}">
+        <div class="day-label">${d.label}</div>
+        <div class="day-name">${d.name.slice(0,2)}</div>
+      `;
+      container.appendChild(label);
+    });
+  }
+
+  // ── Load projects for dropdown ─────────────────────────────────────────────
+  async function loadProjects() {
+    try {
+      const res  = await apiFetch('/projects');
+      const data = await res.json();
+      const sel  = document.getElementById('f-project');
+      (Array.isArray(data) ? data : (data.projects || data.$values || [])).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+    } catch { /* ignore */ }
+  }
+
+  // ── Load & render schedules ────────────────────────────────────────────────
+  async function loadSchedules() {
+    document.getElementById('schedules-loading').style.display = 'block';
+    document.getElementById('schedules-grid').style.display    = 'none';
+    document.getElementById('schedules-empty').style.display   = 'none';
+
+    try {
+      const res  = await apiFetch('/schedules');
+      const data = await res.json();
+      allSchedules = Array.isArray(data) ? data : (data.$values || []);
+      renderSchedules(allSchedules);
+    } catch(e) {
+      document.getElementById('schedules-loading').style.display = 'none';
+      showToast('Fehler beim Laden der Zeitpläne: ' + e.message, 'error');
+    }
+  }
+
+  function renderSchedules(list) {
+    document.getElementById('schedules-loading').style.display = 'none';
+    const grid  = document.getElementById('schedules-grid');
+    const empty = document.getElementById('schedules-empty');
+
+    if (!list.length) { empty.style.display = 'block'; return; }
+
+    const isAdmin = getUserRole() === 'Admin';
+
+    grid.style.display = 'grid';
+    grid.innerHTML = list.map(s => {
+      const scope = s.projectId ? '<span class="badge badge-project">Projekt</span>' : '<span class="badge badge-global">Global</span>';
+      const dflt  = s.isDefault ? ' <span class="badge badge-default">Standard</span>' : '';
+      const days  = maskToChips(s.workDaysMask);
+      const adminBtns = isAdmin ? `
+        <button class="btn btn-ghost btn-sm" onclick="editSchedule(${s.id})">✏️ Bearbeiten</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSchedule(${s.id},'${esc(s.name)}')">🗑</button>
+      ` : '';
+      return `
+        <div class="schedule-card ${s.isDefault ? 'is-default' : ''}">
+          <div class="sc-head">
+            <div class="sc-title">${esc(s.name)}</div>
+            <div style="display:flex;gap:.3rem;flex-wrap:wrap;">${scope}${dflt}</div>
+          </div>
+          <div class="sc-body">
+            <div class="day-strip">${days}</div>
+            <div class="sc-row">🕐 ${s.dailyStartTime} – ${s.dailyEndTime} &nbsp;|&nbsp; <span>${s.dailyHours}h/Tag</span></div>
+          </div>
+          <div class="sc-footer">${adminBtns}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Show preview for default schedule
+    const def = list.find(s => s.isDefault) || list[0];
+    if (def) renderPreview(def);
+  }
+
+  function maskToChips(mask) {
+    return DAYS.map(d => {
+      const active = (mask & d.bit) !== 0;
+      return `<div class="day-chip ${active ? 'active' : ''}" title="${d.name}">${d.label}</div>`;
+    }).join('');
+  }
+
+  // ── Weekly preview panel ───────────────────────────────────────────────────
+  function renderPreview(s) {
+    const card = document.getElementById('preview-card');
+    card.style.display = 'block';
+    document.getElementById('preview-title').textContent = s.name;
+
+    const workDays = DAYS.filter(d => (s.workDaysMask & d.bit) !== 0);
+    const totalHours = workDays.length * s.dailyHours;
+
+    const cols = DAYS.map(d => {
+      const isWork = (s.workDaysMask & d.bit) !== 0;
+      return `
+        <div style="
+          flex:1; min-width:80px;
+          background:${isWork ? '#eff6ff' : '#f8fafc'};
+          border:2px solid ${isWork ? 'var(--accent)' : 'var(--gray-200)'};
+          border-radius:8px; padding:.75rem .5rem;
+          text-align:center; opacity:${isWork ? '1' : '.45'};
+        ">
+          <div style="font-weight:700;font-size:.9rem;color:${isWork ? 'var(--navy)' : 'var(--gray-600)'};">${d.label}</div>
+          <div style="font-size:.7rem;color:var(--gray-600);margin:.15rem 0 .5rem;">${d.name}</div>
+          ${isWork
+            ? `<div style="font-size:1.15rem;font-weight:700;color:var(--accent);">${s.dailyHours}h</div>
+               <div style="font-size:.7rem;color:var(--gray-600);margin-top:.2rem;">${s.dailyStartTime}–${s.dailyEndTime}</div>`
+            : `<div style="font-size:.85rem;color:var(--gray-400);">–</div>`
+          }
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('preview-body').innerHTML = `
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.25rem;">${cols}</div>
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.88rem;color:var(--gray-600);border-top:1px solid var(--gray-200);padding-top:.9rem;">
+        <span>📆 <strong>${workDays.length}</strong> Arbeitstage/Woche</span>
+        <span>⏱ <strong>${s.dailyHours}h</strong>/Tag</span>
+        <span>📊 <strong>${totalHours}h</strong> Gesamtstunden/Woche</span>
+        <span>🕐 Kernzeit: <strong>${s.dailyStartTime} – ${s.dailyEndTime}</strong></span>
+      </div>
+    `;
+  }
+
+  // ── Open modal (create) ────────────────────────────────────────────────────
+  function openModal() {
+    editId = null;
+    document.getElementById('modal-title').textContent = 'Neuer Arbeitszeitplan';
+    document.getElementById('f-name').value    = '';
+    document.getElementById('f-start').value   = '08:00';
+    document.getElementById('f-end').value     = '17:00';
+    document.getElementById('f-hours').value   = '8';
+    document.getElementById('f-project').value = '';
+    document.getElementById('f-default').checked = false;
+    setMask(62); // Mo–Fr default
+    hideAlert('modal-alert');
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  // ── Edit schedule ──────────────────────────────────────────────────────────
+  function editSchedule(id) {
+    const s = allSchedules.find(x => x.id === id);
+    if (!s) return;
+    editId = id;
+    document.getElementById('modal-title').textContent = 'Zeitplan bearbeiten';
+    document.getElementById('f-name').value    = s.name;
+    document.getElementById('f-start').value   = s.dailyStartTime;
+    document.getElementById('f-end').value     = s.dailyEndTime;
+    document.getElementById('f-hours').value   = s.dailyHours;
+    document.getElementById('f-project').value = s.projectId ?? '';
+    document.getElementById('f-default').checked = s.isDefault;
+    setMask(s.workDaysMask);
+    hideAlert('modal-alert');
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  // ── Bitmask helpers ────────────────────────────────────────────────────────
+  function setMask(mask) {
+    DAYS.forEach(d => {
+      const cb = document.getElementById(`day-${d.bit}`);
+      if (cb) cb.checked = (mask & d.bit) !== 0;
+    });
+  }
+
+  function getMask() {
+    return DAYS.reduce((acc, d) => {
+      const cb = document.getElementById(`day-${d.bit}`);
+      return acc + (cb && cb.checked ? d.bit : 0);
+    }, 0);
+  }
+
+  // ── Save (create or update) ────────────────────────────────────────────────
+  async function saveSchedule() {
+    const name    = document.getElementById('f-name').value.trim();
+    const start   = document.getElementById('f-start').value;
+    const end     = document.getElementById('f-end').value;
+    const hours   = parseFloat(document.getElementById('f-hours').value);
+    const projVal = document.getElementById('f-project').value;
+    const isDef   = document.getElementById('f-default').checked;
+    const mask    = getMask();
+
+    if (!name)        { showAlert('modal-alert', 'Bitte einen Namen eingeben.', 'error'); return; }
+    if (mask === 0)   { showAlert('modal-alert', 'Mindestens ein Arbeitstag muss ausgewählt sein.', 'error'); return; }
+    if (!hours || hours <= 0) { showAlert('modal-alert', 'Bitte eine gültige Stundenanzahl eingeben.', 'error'); return; }
+    if (start >= end) { showAlert('modal-alert', 'Arbeitsende muss nach dem Arbeitsbeginn liegen.', 'error'); return; }
+
+    const dto = {
+      name,
+      projectId:      projVal ? parseInt(projVal) : null,
+      workDaysMask:   mask,
+      dailyStartTime: start,
+      dailyEndTime:   end,
+      dailyHours:     hours,
+      isDefault:      isDef
+    };
+
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true; btn.textContent = 'Speichern…';
+
+    try {
+      const res = editId
+        ? await apiFetch(`/schedules/${editId}`, { method: 'PUT',  body: JSON.stringify(dto) })
+        : await apiFetch('/schedules',           { method: 'POST', body: JSON.stringify(dto) });
+
+      if (res.ok) {
+        closeModal();
+        await loadSchedules();
+        showToast(editId ? 'Zeitplan aktualisiert.' : 'Zeitplan erstellt.', 'success');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showAlert('modal-alert', err.title || `Fehler ${res.status}`, 'error');
+      }
+    } catch(e) {
+      showAlert('modal-alert', 'Netzwerkfehler: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Speichern';
+    }
+  }
+
+  // ── Delete schedule ────────────────────────────────────────────────────────
+  async function deleteSchedule(id, name) {
+    if (!confirm(`Zeitplan „${name}" wirklich löschen?`)) return;
+    try {
+      const res = await apiFetch(`/schedules/${id}`, { method: 'DELETE' });
+      if (res.ok || res.status === 204) {
+        await loadSchedules();
+        showToast('Zeitplan gelöscht.', 'success');
+      } else {
+        showToast(`Fehler beim Löschen (${res.status})`, 'error');
+      }
+    } catch(e) {
+      showToast('Netzwerkfehler: ' + e.message, 'error');
+    }
+  }
+
+  // ── Alert helpers ──────────────────────────────────────────────────────────
+  function showAlert(elId, msg, type = 'error') {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = msg;
+    el.className   = `alert alert-${type}`;
+  }
+  function hideAlert(elId) {
+    const el = document.getElementById(elId);
+    if (el) el.className = 'alert alert-hidden';
+  }
+
+  // ── Toast notification ─────────────────────────────────────────────────────
+  let _toastTimer;
+  function showToast(msg, type = 'info') {
+    let toast = document.getElementById('toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'toast';
+      toast.style.cssText = 'position:fixed;bottom:4.5rem;left:50%;transform:translateX(-50%);z-index:2000;padding:.65rem 1.25rem;border-radius:8px;font-size:.9rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.15);transition:opacity .3s;';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.background = type === 'success' ? '#065f46' : type === 'error' ? '#991b1b' : '#1e40af';
+    toast.style.color = '#fff';
+    toast.style.opacity = '1';
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  });
+</script>
+</body>
+</html>

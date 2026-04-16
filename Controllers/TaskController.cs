@@ -30,7 +30,6 @@ public class TaskController : ControllerBase
     public async Task<IActionResult> GetGanttData(int projectId)
     {
         var tasks = await _db.Tasks
-            .Include(t => t.Assignee)
             .Include(t => t.TaskAssignments)
             .ThenInclude(ta => ta.User)
             .Where(t => t.ProjectId == projectId)
@@ -49,10 +48,7 @@ public class TaskController : ControllerBase
                 type = t.IsMilestone ? "project" : "task",
                 isMilestone = t.IsMilestone,
                 note = t.Note,
-                // Legacy support
-                assigneeId = t.AssigneeId,
-                assigneeName = t.Assignee != null ? t.Assignee.FullName : null,
-                // Neue Mehrfachzuweisung
+                // Mehrfachzuweisung
                 assignments = t.TaskAssignments.Select(ta => new {
                     userId = ta.UserId,
                     userName = ta.User.FullName,
@@ -84,17 +80,6 @@ public class TaskController : ControllerBase
         // ✅ FIX TF-28: Validate required fields before saving (returns 400 instead of 500)
         if (string.IsNullOrWhiteSpace(dto.Title))
             return BadRequest(new { error = "Aufgabentitel darf nicht leer sein." });
-        // Prüfen: Assignee muss Projektmitglied oder Owner sein
-        string? resolvedAssigneeId = null;
-        if (!string.IsNullOrEmpty(dto.AssigneeId))
-        {
-            var isMember = await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == dto.AssigneeId);
-            var isOwner = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == dto.AssigneeId);
-            if (!isMember && !isOwner)
-                return BadRequest(new { error = "Die zugewiesene Person ist kein Mitglied dieses Projekts." });
-            resolvedAssigneeId = dto.AssigneeId;
-        }
-
         var isMilestone = dto.IsMilestone ?? false;
 
         // ✅ FIX TF-14/TF-19: If no StartDate provided (default 0001-01-01), use project's StartDate
@@ -128,7 +113,6 @@ public class TaskController : ControllerBase
             IsMilestone = isMilestone,
             Note = dto.Note,
             ProjectId = projectId,
-            AssigneeId = resolvedAssigneeId,
             PlannedDuration = dto.PlannedDuration
         };
 
@@ -149,15 +133,6 @@ public class TaskController : ControllerBase
         var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == id && t.ProjectId == projectId);
         if (task == null) return NotFound();
 
-        // Prüfen: neuer Assignee muss Projektmitglied oder Owner sein
-        if (dto.AssigneeId != null && dto.AssigneeId != "")
-        {
-            var isMember = await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == dto.AssigneeId);
-            var isOwner = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == dto.AssigneeId);
-            if (!isMember && !isOwner)
-                return BadRequest(new { error = "Die zugewiesene Person ist kein Mitglied dieses Projekts." });
-        }
-
         task.Title = dto.Title;
         task.StartDate = dto.StartDate;
         task.Progress = Math.Clamp(dto.Progress, 0, 100);
@@ -166,7 +141,6 @@ public class TaskController : ControllerBase
         if (dto.Status != null) task.Status = dto.Status;
         if (dto.IsMilestone != null) task.IsMilestone = dto.IsMilestone.Value;
         if (dto.Note != null) task.Note = dto.Note;
-        if (dto.AssigneeId != null) task.AssigneeId = dto.AssigneeId == "" ? null : dto.AssigneeId;
         if (dto.PlannedDuration != null) task.PlannedDuration = dto.PlannedDuration;
 
         // Meilensteine: EndDate manuell setzen; Tasks: wird berechnet
@@ -308,7 +282,6 @@ public record TaskDto(
     DateTime? EndDate,
     int Progress,
     int? ParentId,
-    string? AssigneeId = null,
     string? Priority = null,
     string? Status = null,
     bool? IsMilestone = null,

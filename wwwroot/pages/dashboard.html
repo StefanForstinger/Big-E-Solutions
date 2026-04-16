@@ -13,6 +13,47 @@
     .role-teacher { background:#fef3c7; color:#92400e; }
     .role-student { background:#dbeafe; color:#1e40af; }
 
+    /* ── Navbar-Buttons: sichtbar auf dunkelblauem Hintergrund ─────────────── */
+    .btn-nav {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .38rem .85rem; border-radius: 6px;
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; white-space: nowrap;
+      background: rgba(255,255,255,.18);
+      color: var(--white);
+      border: 1.5px solid rgba(255,255,255,.55);
+      opacity: 1;
+      transition: background .2s, border-color .2s, box-shadow .2s;
+    }
+    .btn-nav:hover {
+      background: rgba(255,255,255,.30);
+      border-color: rgba(255,255,255,.85);
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      color: var(--white);
+    }
+    .btn-nav .nav-icon { font-size: 1rem; line-height: 1; opacity: 1; }
+
+    /* ── Projekt-Karte: Delete-Button ──────────────────────────────────────── */
+    .btn-card-delete {
+      position: absolute; top: .85rem; right: .85rem;
+      background: var(--gray-100); color: var(--gray-600);
+      border: 1.5px solid var(--gray-300);
+      border-radius: 6px; padding: 3px 8px;
+      font-size: .82rem; font-weight: 700; cursor: pointer;
+      opacity: 1;
+      transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
+      z-index: 10;
+    }
+    .btn-card-delete:hover {
+      background: var(--red); color: var(--white);
+      border-color: var(--red);
+      box-shadow: 0 2px 8px rgba(231,76,60,.35);
+    }
+
+    /* ── Edit / Export Buttons in Karte ────────────────────────────────────── */
+    .project-card .btn-ghost { opacity: 1; color: var(--navy); }
+    .project-card .btn-ghost:hover { background: var(--gray-200); color: var(--navy); }
+
     .panel-section { margin-bottom:2rem; }
     .panel-section-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:.9rem; }
     .panel-section-title h2 { font-size:1rem; color:var(--navy); }
@@ -63,8 +104,13 @@
 <nav class="navbar">
   <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
   <div class="navbar-right">
-    <div id="admin-nav-link" style="display: none; margin-right: 1rem;">
-      <a href="/pages/user-management.html" class="btn btn-outline btn-sm">👥 Benutzer</a>
+    <div id="admin-nav-link" style="display:none; gap:.4rem; margin-right:.75rem; align-items:center;">
+      <a href="/pages/user-management.html" class="btn-nav">
+        <span class="nav-icon">👥</span> Benutzer
+      </a>
+      <a href="/pages/work-schedule.html" class="btn-nav">
+        <span class="nav-icon">⏱</span> Arbeitszeit
+      </a>
     </div>
     <span class="navbar-user" id="nav-user"></span>
     <span class="role-badge" id="nav-role"></span>
@@ -178,14 +224,19 @@
   roleEl.textContent = currentRole;
   roleEl.className = 'role-badge role-' + currentRole.toLowerCase();
 
-  if (currentRole === 'Teacher') document.getElementById('btn-new-project').style.display = 'none';
+  const elBtnNew     = document.getElementById('btn-new-project');
+  const elAdminPanel = document.getElementById('admin-panel');
+  const elNavLink    = document.getElementById('admin-nav-link');
+  const elTeacher    = document.getElementById('teacher-panel');
+
+  if (currentRole === 'Teacher' && elBtnNew)     elBtnNew.style.display = 'none';
   if (currentRole === 'Admin') {
-    document.getElementById('admin-panel').style.display = 'block';
-    document.getElementById('admin-nav-link').style.display = 'block';
+    if (elAdminPanel) elAdminPanel.style.display = 'block';
+    if (elNavLink)    elNavLink.style.display    = 'flex';
     loadAdminPanel();
   }
   if (currentRole === 'Teacher' || currentRole === 'Admin') {
-    document.getElementById('teacher-panel').style.display = 'block';
+    if (elTeacher) elTeacher.style.display = 'block';
     loadTeacherPanel();
   }
 
@@ -284,9 +335,7 @@
            data-start="${start}" data-end="${end}" data-color="${p.color}">
         
         ${canManage ? `
-          <button class="btn btn-danger btn-sm" 
-                  style="position: absolute; top: 1rem; right: 1rem; padding: 4px 8px; z-index: 10;" 
-                  onclick="deleteProject(${p.id})">
+          <button class="btn-card-delete" onclick="deleteProject(${p.id})" title="Projekt löschen">
             🗑
           </button>` : ''}
 
@@ -303,6 +352,7 @@
 
         <div class="project-actions" style="margin-top: 1.2rem; display: flex; align-items: center; gap: 0.4rem;">
           <button class="btn btn-primary btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openGantt(${p.id})">📊 Gantt</button>
+          <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openCosts(${p.id})">💰 Kosten</button>
           <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="exportProjectExcel(${p.id})">📊 XLS</button>
           <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="exportProjectPdf(${p.id})">📄 PDF</button>
           ${canManage ? `<button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openEdit(${p.id})">✏️ Edit</button>` : ''}
@@ -432,7 +482,8 @@
   function openModal(id) { document.getElementById(id).classList.add('open'); }
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
   function toggleSection(id) { const e = document.getElementById(id); e.style.display = (e.style.display==='none'?'grid':'none'); }
-  function openGantt(id) { window.location.href = `/pages/gantt.html?projectId=${id}`; }
+  function openGantt(id)  { window.location.href = `/pages/gantt.html?projectId=${id}`; }
+  function openCosts(id)  { window.location.href = `/pages/costs.html?projectId=${id}`; }
 
   loadProjects();
 </script>

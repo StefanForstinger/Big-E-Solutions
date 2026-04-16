@@ -27,6 +27,26 @@
             min-height: 0;
         }
 
+        /* ── Navbar-Buttons ────────────────────────────────────────────────── */
+        .btn-nav {
+          display: inline-flex; align-items: center; gap: .35rem;
+          padding: .38rem .85rem; border-radius: 6px;
+          font-size: .85rem; font-weight: 600; cursor: pointer;
+          text-decoration: none; white-space: nowrap;
+          background: rgba(255,255,255,.18);
+          color: #fff;
+          border: 1.5px solid rgba(255,255,255,.55);
+          opacity: 1;
+          transition: background .2s, border-color .2s, box-shadow .2s;
+        }
+        .btn-nav:hover {
+          background: rgba(255,255,255,.30);
+          border-color: rgba(255,255,255,.85);
+          box-shadow: 0 2px 8px rgba(0,0,0,.2);
+          color: #fff;
+        }
+        .btn-nav .nav-icon { font-size: 1rem; line-height: 1; opacity: 1; }
+
         /* Detail Panel Styling */
         #detail-panel {
             position: fixed;
@@ -168,8 +188,9 @@
   <nav class="navbar">
     <a href="/pages/dashboard.html" class="navbar-brand">🗓 Projektplaner</a>
     <div class="navbar-right">
-      <div id="admin-nav-link" style="display: none; margin-right: 1rem;">
-<!--        <a href="/pages/user-management.html" class="btn btn-outline btn-sm">👥 Benutzer</a>-->
+      <div id="admin-nav-link" style="display:none; gap:.4rem; margin-right:.75rem; align-items:center;">
+        <a href="/pages/user-management.html" class="btn-nav"><span class="nav-icon">👥</span> Benutzer</a>
+        <a href="/pages/work-schedule.html"   class="btn-nav"><span class="nav-icon">⏱</span> Arbeitszeit</a>
       </div>
         <span class="navbar-user" id="nav-user"></span>
         <span class="role-badge" id="nav-role"></span>
@@ -220,7 +241,8 @@
             <div id="tab-info" class="detail-pane active">
                 <div id="dp-status" class="badge"></div>
                 <p><strong>Zeitraum:</strong> <span id="dp-dates"></span></p>
-                <p id="dp-duration-row"><strong>Dauer:</strong> <span id="dp-duration"></span></p>
+                <p id="dp-duration-row"><strong>Geplante Dauer:</strong> <span id="dp-duration"></span></p>
+                <p id="dp-actual-row" style="display:none;"><strong>Tatsächliche Dauer:</strong> <span id="dp-actual" style="color:var(--green);font-weight:600;"></span></p>
                 <p><strong>Zuständig:</strong> <span id="dp-assignee"></span></p>
                 <p><strong>Fortschritt:</strong> <span id="dp-progress">0%</span></p>
             </div>
@@ -301,8 +323,9 @@
         let addingMilestone = false;
 
         // UI Setup
-        document.getElementById('nav-user').textContent = getUserName();
-        if (currentRole === 'Admin') document.getElementById('admin-nav-link').style.display = 'block';
+        const elNavUser = document.getElementById('nav-user'); if (elNavUser) elNavUser.textContent = getUserName();
+        const elNavLink = document.getElementById('admin-nav-link');
+        if (currentRole === 'Admin' && elNavLink) elNavLink.style.display = 'flex';
 
         // Gantt Init
         gantt.config.date_format = '%Y-%m-%d';
@@ -705,11 +728,28 @@
             // Dauer anzeigen
             const dpDurRow = document.getElementById('dp-duration-row');
             const dpDur = document.getElementById('dp-duration');
+            const dpActRow = document.getElementById('dp-actual-row');
+            const dpAct = document.getElementById('dp-actual');
             if (task.plannedDuration && !task.isMilestone) {
                 dpDur.textContent = task.plannedDuration + ' Stunden';
                 dpDurRow.style.display = '';
             } else {
                 dpDurRow.style.display = 'none';
+            }
+            // Tatsächliche Dauer anzeigen (aus TimeEntries summiert)
+            if (task.actualDuration && task.actualDuration > 0 && !task.isMilestone) {
+                dpAct.textContent = task.actualDuration + ' Stunden';
+                dpActRow.style.display = '';
+                // Visuellen Hinweis geben wenn über Plan
+                if (task.plannedDuration && task.actualDuration > task.plannedDuration) {
+                    dpAct.style.color = 'var(--red)';
+                    dpAct.title = 'Überschreitet geplante Dauer!';
+                } else {
+                    dpAct.style.color = 'var(--green)';
+                    dpAct.title = '';
+                }
+            } else {
+                dpActRow.style.display = 'none';
             }
 
             const pct = Math.round((task.progress || 0) * 100);
@@ -1110,7 +1150,7 @@
             //wer des gmocht hod is a koffa
 
             // Populate navbar
-            document.getElementById('nav-user').textContent = getUserName();
+            const elNavUser = document.getElementById('nav-user'); if (elNavUser) elNavUser.textContent = getUserName();
 
             const roleEl = document.getElementById('nav-role');
             const role = currentRole.toLowerCase();
