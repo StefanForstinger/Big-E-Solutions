@@ -57,10 +57,6 @@ public class AppDbContext : IdentityDbContext<AppUser>
             .HasOne(t => t.Project).WithMany(p => p.Tasks)
             .HasForeignKey(t => t.ProjectId).OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<ProjectTask>()
-            .HasOne(t => t.Assignee).WithMany()
-            .HasForeignKey(t => t.AssigneeId).OnDelete(DeleteBehavior.SetNull);
-
         builder.Entity<ProjectTask>().Property(t => t.PlannedDuration).HasColumnType("NUMBER(10,2)");
         builder.Entity<ProjectTask>().Property(t => t.ActualDuration).HasColumnType("NUMBER(10,2)");
         builder.Entity<ProjectTask>().Property(t => t.WorkSharePercent).HasColumnType("NUMBER(5,2)");

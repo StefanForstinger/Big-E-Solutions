@@ -24,7 +24,7 @@ public class ExportController : ControllerBase
     private async Task<List<Project>> LoadProjects(string userId, string role)
     {
         var query = _db.Projects
-            .Include(p => p.Tasks).ThenInclude(t => t.Assignee)
+            .Include(p => p.Tasks).ThenInclude(t => t.TaskAssignments).ThenInclude(ta => ta.User)
             .Include(p => p.Owner)
             .Include(p => p.Members).ThenInclude(m => m.User)
             .OrderBy(p => p.StartDate);
@@ -42,7 +42,7 @@ public class ExportController : ControllerBase
         var role   = User.FindFirstValue(ClaimTypes.Role)!;
 
         var project = await _db.Projects
-            .Include(p => p.Tasks).ThenInclude(t => t.Assignee)
+            .Include(p => p.Tasks).ThenInclude(t => t.TaskAssignments).ThenInclude(ta => ta.User)
             .Include(p => p.Owner)
             .Include(p => p.Members).ThenInclude(m => m.User)
             .FirstOrDefaultAsync(p => p.Id == projectId);
@@ -111,7 +111,7 @@ public class ExportController : ControllerBase
             ws.Cell(row, 4).Value = task.Progress;
             ws.Cell(row, 5).Value = task.StartDate.ToString("dd.MM.yyyy");
             ws.Cell(row, 6).Value = task.EndDate.ToString("dd.MM.yyyy");
-            ws.Cell(row, 7).Value = task.Assignee?.FullName ?? "-";
+            ws.Cell(row, 7).Value = FormatAssignments(task);
             ws.Cell(row, 8).Value = task.IsMilestone ? "Ja" : "Nein";
             ws.Cell(row, 9).Value = task.Note ?? "";
 
@@ -240,7 +240,7 @@ public class ExportController : ControllerBase
                 ws.Cell(tRow, 4).Value = task.Progress;
                 ws.Cell(tRow, 5).Value = task.StartDate.ToString("dd.MM.yyyy");
                 ws.Cell(tRow, 6).Value = task.EndDate.ToString("dd.MM.yyyy");
-                ws.Cell(tRow, 7).Value = task.Assignee?.FullName ?? "-";
+                ws.Cell(tRow, 7).Value = FormatAssignments(task);
                 ws.Cell(tRow, 8).Value = task.IsMilestone ? "Ja" : "Nein";
 
                 if (tRow % 2 == 0)
@@ -269,7 +269,7 @@ public class ExportController : ControllerBase
         var role   = User.FindFirstValue(ClaimTypes.Role)!;
 
         var project = await _db.Projects
-            .Include(p => p.Tasks).ThenInclude(t => t.Assignee)
+            .Include(p => p.Tasks).ThenInclude(t => t.TaskAssignments).ThenInclude(ta => ta.User)
             .Include(p => p.Owner)
             .Include(p => p.Members).ThenInclude(m => m.User)
             .FirstOrDefaultAsync(p => p.Id == projectId);
@@ -430,7 +430,7 @@ public class ExportController : ControllerBase
                                     TaskCell($"{task.Progress} %");
                                     TaskCell(task.StartDate.ToString("dd.MM.yy"));
                                     TaskCell(task.EndDate.ToString("dd.MM.yy"));
-                                    TaskCell(task.Assignee?.FullName ?? "-");
+                                    TaskCell(FormatAssignments(task));
                                     TaskCell(task.IsMilestone ? "✓" : "");
 
                                     rowIdx++;
@@ -462,6 +462,23 @@ public class ExportController : ControllerBase
     }
 
     // ── Hilfsmethoden ────────────────────────────────────────────────────────
+
+    // ── Hilfsmethode: Zuweisungen als "Mayr[50%], Schuster[50%]" formatieren ─
+    private static string FormatAssignments(ProjectTask task)
+    {
+        if (task.TaskAssignments == null || !task.TaskAssignments.Any())
+            return "-";
+        return string.Join(", ", task.TaskAssignments
+            .OrderByDescending(ta => ta.Percentage)
+            .Select(ta =>
+            {
+                var name = !string.IsNullOrEmpty(ta.User?.ShortName)
+                    ? ta.User.ShortName
+                    : ta.User?.FullName ?? "?";
+                return $"{name}[{ta.Percentage}%]";
+            }));
+    }
+
     private static readonly char[] _invalidFileChars = System.IO.Path.GetInvalidFileNameChars();
     private static string SanitizeFileName(string name) =>
         string.Concat(name.Select(c => _invalidFileChars.Contains(c) ? '_' : c)).Replace(' ', '_');

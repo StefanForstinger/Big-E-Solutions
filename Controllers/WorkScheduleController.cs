@@ -52,6 +52,12 @@ public class WorkScheduleController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] WorkScheduleDto dto)
     {
+        if (dto is null)
+            return BadRequest(new { error = "Keine Daten übermittelt." });
+
+        var validationError = ValidateScheduleDto(dto);
+        if (validationError != null) return BadRequest(new { error = validationError });
+
         // Wenn neuer Zeitplan als Default gesetzt wird, alten Default entfernen
         if (dto.IsDefault)
             await ClearDefaultFlag(dto.ProjectId);
@@ -77,6 +83,12 @@ public class WorkScheduleController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, [FromBody] WorkScheduleDto dto)
     {
+        if (dto is null)
+            return BadRequest(new { error = "Keine Daten übermittelt." });
+
+        var validationError = ValidateScheduleDto(dto);
+        if (validationError != null) return BadRequest(new { error = validationError });
+
         var schedule = await _db.WorkSchedules.FindAsync(id);
         if (schedule == null) return NotFound();
 
@@ -150,6 +162,31 @@ public class WorkScheduleController : ControllerBase
 
         foreach (var task in tasksToRecalculate)
             await _planning.CalculateScheduleAsync(task);
+    }
+
+    // ── Validierungshilfe ────────────────────────────────────────────────────
+    private static string? ValidateScheduleDto(WorkScheduleDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Name) || dto.Name.Trim().Length < 2)
+            return "Name muss mindestens 2 Zeichen lang sein.";
+
+        if (dto.WorkDaysMask <= 0 || dto.WorkDaysMask > 127)
+            return "Mindestens ein Arbeitstag muss ausgewählt sein (WorkDaysMask 1–127).";
+
+        if (dto.DailyHours <= 0 || dto.DailyHours > 24)
+            return "Stunden pro Tag müssen zwischen 0,5 und 24 liegen.";
+
+        // HH:MM Format prüfen
+        var timeRegex = new System.Text.RegularExpressions.Regex(@"^([01]\d|2[0-3]):[0-5]\d$");
+        if (!timeRegex.IsMatch(dto.DailyStartTime ?? ""))
+            return "Arbeitsbeginn muss im Format HH:MM angegeben werden (z.B. 08:00).";
+        if (!timeRegex.IsMatch(dto.DailyEndTime ?? ""))
+            return "Arbeitsende muss im Format HH:MM angegeben werden (z.B. 17:00).";
+
+        if (string.Compare(dto.DailyStartTime, dto.DailyEndTime, StringComparison.Ordinal) >= 0)
+            return "Arbeitsende muss nach dem Arbeitsbeginn liegen.";
+
+        return null; // alles ok
     }
 
     // ── Hilfsmethode: Default-Flag bei anderen Zeitplänen entfernen ──────────

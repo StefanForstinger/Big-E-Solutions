@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kostenübersicht – Projektplaner</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <style>
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .page-wrapper  { max-width: 1100px; margin: 2rem auto; padding: 0 1rem 5rem; }
+    .page-header   { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:1.75rem; gap:1rem; flex-wrap:wrap; }
+    .page-header h1 { margin-bottom:.25rem; }
+    .text-muted    { color:var(--gray-600); font-size:.9rem; }
+
+    /* ── Card ────────────────────────────────────────────────────────────── */
+    .card          { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; margin-bottom:1.5rem; }
+    .card-header   { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:1px solid var(--gray-200); }
+    .card-header h2 { font-size:1rem; margin:0; }
+    .card-body     { padding:1.25rem; }
+
+    /* ── KPI Boxes ───────────────────────────────────────────────────────── */
+    .kpi-grid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .kpi-box   {
+      background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:1.1rem 1.25rem; border-left:4px solid var(--accent);
+    }
+    .kpi-box.green  { border-left-color:var(--green); }
+    .kpi-box.red    { border-left-color:var(--red); }
+    .kpi-box.amber  { border-left-color:var(--amber); }
+    .kpi-label { font-size:.78rem; font-weight:700; color:var(--gray-600); text-transform:uppercase; letter-spacing:.04em; margin-bottom:.35rem; }
+    .kpi-value { font-size:1.75rem; font-weight:800; color:var(--navy); line-height:1; }
+    .kpi-sub   { font-size:.78rem; color:var(--gray-600); margin-top:.25rem; }
+
+    /* ── Comparison Bar ──────────────────────────────────────────────────── */
+    .comparison-wrap { background:var(--gray-100); border-radius:8px; padding:1.1rem 1.25rem; margin-bottom:1.5rem; }
+    .comparison-label { font-size:.82rem; font-weight:700; color:var(--gray-600); margin-bottom:.5rem; }
+    .bar-track  { background:var(--gray-200); border-radius:20px; height:14px; overflow:hidden; position:relative; }
+    .bar-fill   { height:100%; border-radius:20px; transition:width .6s ease; }
+    .bar-legend { display:flex; gap:1.5rem; margin-top:.5rem; font-size:.78rem; flex-wrap:wrap; }
+    .bar-dot    { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:.35rem; vertical-align:middle; }
+
+    /* ── Table ───────────────────────────────────────────────────────────── */
+    .data-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    .data-table th { background:var(--navy); color:var(--white); padding:.55rem .85rem; text-align:left; font-size:.8rem; font-weight:700; letter-spacing:.02em; }
+    .data-table td { padding:.55rem .85rem; border-bottom:1px solid var(--gray-200); }
+    .data-table tr:last-child td { border-bottom:none; }
+    .data-table tr:nth-child(even) td { background:var(--gray-100); }
+    .data-table tr:hover td { background:#EFF6FF; }
+    .text-right  { text-align:right; }
+    .text-center { text-align:center; }
+
+    /* ── Badge / Status ──────────────────────────────────────────────────── */
+    .badge-over   { background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:20px; font-size:.75rem; font-weight:700; }
+    .badge-under  { background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:20px; font-size:.75rem; font-weight:700; }
+    .badge-on     { background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:20px; font-size:.75rem; font-weight:700; }
+
+    /* ── Project selector ────────────────────────────────────────────────── */
+    .project-select-wrap { display:flex; align-items:center; gap:.75rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+    .project-select-wrap select { flex:1; min-width:220px; max-width:360px; padding:.55rem .85rem; border:1.5px solid var(--gray-400); border-radius:6px; font-size:.95rem; }
+
+    /* ── Empty / Loading ─────────────────────────────────────────────────── */
+    .state-box { text-align:center; padding:3rem 1rem; color:var(--gray-600); }
+    .state-box .icon { font-size:2.2rem; margin-bottom:.6rem; }
+
+    /* ── Alerts ──────────────────────────────────────────────────────────── */
+    .alert { padding:.7rem 1rem; border-radius:6px; font-size:.9rem; }
+    .alert-error { background:#fee2e2; color:#991b1b; }
+
+    /* ── btn-nav (navbar) ────────────────────────────────────────────────── */
+    .btn-nav { display:inline-flex; align-items:center; gap:.35rem; padding:.38rem .85rem; border-radius:6px; font-size:.85rem; font-weight:600; cursor:pointer; text-decoration:none; white-space:nowrap; background:rgba(255,255,255,.18); color:var(--white); border:1.5px solid rgba(255,255,255,.55); opacity:1; transition:background .2s,border-color .2s,box-shadow .2s; }
+    .btn-nav:hover { background:rgba(255,255,255,.30); border-color:rgba(255,255,255,.85); box-shadow:0 2px 8px rgba(0,0,0,.2); color:var(--white); }
+    .btn-nav .nav-icon { font-size:1rem; line-height:1; opacity:1; }
+
+    /* ── Footer ──────────────────────────────────────────────────────────── */
+    .auth-footer { position:fixed; bottom:0; left:0; right:0; text-align:center; padding:.75rem 1rem; font-size:.8rem; color:rgba(255,255,255,.45); background:#1E3A5F; z-index:100; }
+    .auth-footer a { color:rgba(255,255,255,.65); text-decoration:none; font-weight:600; }
+    .auth-footer .sep { margin:0 .5rem; opacity:.4; }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
+  <div class="navbar-right">
+    <div id="admin-nav-links" style="display:none; gap:.4rem; margin-right:.75rem; align-items:center;">
+      <a href="/pages/user-management.html" class="btn-nav"><span class="nav-icon">👥</span> Benutzer</a>
+      <a href="/pages/work-schedule.html"   class="btn-nav"><span class="nav-icon">⏱</span> Arbeitszeit</a>
+      <a href="/pages/costs.html"           class="btn-nav active" style="background:var(--accent);border-color:var(--accent);"><span class="nav-icon">💰</span> Kosten</a>
+    </div>
+    <span class="navbar-user" id="nav-user"></span>
+    <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
+  </div>
+</nav>
+
+<!-- ── Page ────────────────────────────────────────────────────────────────── -->
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <h1>💰 Kostenübersicht</h1>
+      <p class="text-muted">Geplante vs. tatsächliche Kosten basierend auf Arbeitsstunden und Stundensätzen</p>
+    </div>
+  </div>
+
+  <!-- Projekt-Auswahl -->
+  <div class="project-select-wrap">
+    <label style="font-weight:700;font-size:.9rem;color:var(--navy);">Projekt:</label>
+    <select id="project-select" onchange="onProjectChange()">
+      <option value="">— Projekt wählen —</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="loadCosts()">🔄 Aktualisieren</button>
+  </div>
+
+  <!-- Inhalt -->
+  <div id="content-area">
+    <div class="state-box">
+      <div class="icon">📊</div>
+      <p>Bitte ein Projekt auswählen</p>
+    </div>
+  </div>
+
+</div>
+
+<footer class="auth-footer">
+  © 2025 Projektplaner
+  <span class="sep">·</span><a href="/pages/impressum.html">Impressum</a>
+  <span class="sep">·</span><a href="/pages/datenschutz.html">Datenschutz</a>
+</footer>
+
+<script src="/js/api.js"></script>
+<script>
+let currentProjectId = null;
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!isLoggedIn()) { window.location.href = '/index.html'; return; }
+
+  const elNavUser  = document.getElementById('nav-user');
+  const elNavLinks = document.getElementById('admin-nav-links');
+  if (elNavUser) elNavUser.textContent = getUserName();
+
+  const role = getUserRole();
+  if (role === 'Admin' && elNavLinks) elNavLinks.style.display = 'flex';
+
+  await loadProjects();
+
+  // projectId aus URL-Parameter vorselektieren
+  const params = new URLSearchParams(location.search);
+  const pid = params.get('projectId');
+  if (pid) {
+    document.getElementById('project-select').value = pid;
+    onProjectChange();
+  }
+});
+
+// ── Projekte laden ─────────────────────────────────────────────────────────
+async function loadProjects() {
+  try {
+    const res  = await apiFetch('/project');
+    const data = await res.json();
+    const sel  = document.getElementById('project-select');
+    const projects = Array.isArray(data) ? data : (data.projects || data.$values || []);
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    showError('Projekte konnten nicht geladen werden: ' + e.message);
+  }
+}
+
+function onProjectChange() {
+  const val = document.getElementById('project-select').value;
+  currentProjectId = val ? parseInt(val) : null;
+  if (currentProjectId) loadCosts();
+  else setContent('<div class="state-box"><div class="icon">📊</div><p>Bitte ein Projekt wählen</p></div>');
+}
+
+// ── Kostendaten laden ──────────────────────────────────────────────────────
+async function loadCosts() {
+  if (!currentProjectId) return;
+  setContent('<div class="state-box"><div class="icon">⏳</div><p>Lädt…</p></div>');
+  try {
+    const [plannedRes, actualRes] = await Promise.all([
+      apiFetch(`/costs/planned/${currentProjectId}`),
+      apiFetch(`/costs/actual/${currentProjectId}`)
+    ]);
+
+    if (!plannedRes.ok || !actualRes.ok) throw new Error('API-Fehler');
+
+    const planned = await plannedRes.json();
+    const actual  = await actualRes.json();
+
+    renderCosts(planned, actual);
+  } catch(e) {
+    showError('Fehler beim Laden der Kostendaten: ' + e.message);
+  }
+}
+
+// ── Darstellung ────────────────────────────────────────────────────────────
+function renderCosts(planned, actual) {
+  const plannedCost  = planned.totalPlannedCost  ?? 0;
+  const actualCost   = actual.totalActualCost    ?? 0;
+  const plannedHours = planned.totalPlannedHours ?? 0;
+  const actualHours  = actual.totalActualHours   ?? 0;
+
+  const variance     = actualCost - plannedCost;
+  const variancePct  = plannedCost > 0 ? ((variance / plannedCost) * 100).toFixed(1) : 0;
+  const isOver       = variance > 0;
+  const isUnder      = variance < 0;
+  const statusBadge  = isOver
+    ? '<span class="badge-over">⚠ Überschreitung</span>'
+    : isUnder
+    ? '<span class="badge-under">✓ Unterschreitung</span>'
+    : '<span class="badge-on">= Im Plan</span>';
+
+  const maxCost = Math.max(plannedCost, actualCost, 1);
+  const plannedPct = Math.round((plannedCost / maxCost) * 100);
+  const actualPct  = Math.round((actualCost  / maxCost) * 100);
+
+  const memberRows = buildMemberTable(planned.memberCosts ?? [], actual.memberCosts ?? []);
+  const taskRows   = buildTaskTable(planned.costBreakdown ?? []);
+
+  setContent(`
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-label">Geplante Kosten</div>
+        <div class="kpi-value">${fmt(plannedCost)} €</div>
+        <div class="kpi-sub">${plannedHours}h geplant</div>
+      </div>
+      <div class="kpi-box ${isOver ? 'red' : 'green'}">
+        <div class="kpi-label">Tatsächliche Kosten</div>
+        <div class="kpi-value">${fmt(actualCost)} €</div>
+        <div class="kpi-sub">${actualHours}h erfasst</div>
+      </div>
+      <div class="kpi-box amber">
+        <div class="kpi-label">Abweichung</div>
+        <div class="kpi-value" style="color:${isOver ? 'var(--red)' : isUnder ? 'var(--green)' : 'var(--navy)'}">
+          ${isOver ? '+' : ''}${fmt(variance)} €
+        </div>
+        <div class="kpi-sub">${isOver ? '+' : ''}${variancePct}% ${statusBadge}</div>
+      </div>
+    </div>
+
+    <!-- Vergleichsbalken -->
+    <div class="comparison-wrap">
+      <div class="comparison-label">Geplant vs. Tatsächlich (Kosten)</div>
+      <div style="margin-bottom:.5rem;">
+        <div style="font-size:.78rem;color:var(--gray-600);margin-bottom:.25rem;">Geplant</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${plannedPct}%;background:var(--accent);"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:.78rem;color:var(--gray-600);margin-bottom:.25rem;">Tatsächlich</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${actualPct}%;background:${isOver ? 'var(--red)' : 'var(--green)'};"></div>
+        </div>
+      </div>
+      <div class="bar-legend">
+        <span><span class="bar-dot" style="background:var(--accent);"></span>Geplant: ${fmt(plannedCost)} €</span>
+        <span><span class="bar-dot" style="background:${isOver ? 'var(--red)' : 'var(--green)'};"></span>Tatsächlich: ${fmt(actualCost)} €</span>
+      </div>
+    </div>
+
+    <!-- Mitarbeiter-Kosten -->
+    <div class="card">
+      <div class="card-header"><h2>👥 Kosten pro Mitarbeiter</h2></div>
+      <div class="card-body" style="padding:0;">
+        ${memberRows.length
+          ? `<table class="data-table">${memberRows}</table>`
+          : '<div class="state-box"><p>Noch keine Zeiteinträge erfasst</p></div>'}
+      </div>
+    </div>
+
+    <!-- Task-Aufschlüsselung -->
+    <div class="card">
+      <div class="card-header"><h2>📋 Kosten pro Aufgabe (geplant)</h2></div>
+      <div class="card-body" style="padding:0;">
+        ${taskRows.length
+          ? `<table class="data-table">${taskRows}</table>`
+          : '<div class="state-box"><p>Keine Aufgaben mit Stundenzuweisungen gefunden</p></div>'}
+      </div>
+    </div>
+  `);
+}
+
+function buildMemberTable(plannedMembers, actualMembers) {
+  // Merge by userId
+  const map = {};
+  plannedMembers.forEach(m => {
+    map[m.userId] = { name: m.userName, short: m.shortName, rate: m.hourlyRate,
+      plannedHours: m.totalHours, plannedCost: m.totalCost, actualHours: 0, actualCost: 0 };
+  });
+  actualMembers.forEach(m => {
+    if (!map[m.userId]) map[m.userId] = { name: m.userName, short: m.shortName, rate: m.hourlyRate,
+      plannedHours: 0, plannedCost: 0 };
+    map[m.userId].actualHours = m.totalHours;
+    map[m.userId].actualCost  = m.totalCost;
+  });
+
+  if (!Object.keys(map).length) return '';
+
+  const header = `<thead><tr>
+    <th>Mitarbeiter</th>
+    <th class="text-right">Stundensatz</th>
+    <th class="text-right">Geplante Std.</th>
+    <th class="text-right">Geplante Kosten</th>
+    <th class="text-right">Tats. Std.</th>
+    <th class="text-right">Tats. Kosten</th>
+    <th class="text-center">Abweichung</th>
+  </tr></thead>`;
+
+  const rows = Object.values(map).map(m => {
+    const diff  = (m.actualCost || 0) - (m.plannedCost || 0);
+    const badge = diff > 0.01
+      ? `<span class="badge-over">+${fmt(diff)} €</span>`
+      : diff < -0.01
+      ? `<span class="badge-under">${fmt(diff)} €</span>`
+      : `<span class="badge-on">= 0 €</span>`;
+    return `<tr>
+      <td><strong>${esc(m.name)}</strong>${m.short ? ' <small style="color:var(--gray-600);">(' + esc(m.short) + ')</small>' : ''}</td>
+      <td class="text-right">${fmt(m.rate)} €/h</td>
+      <td class="text-right">${m.plannedHours || 0} h</td>
+      <td class="text-right">${fmt(m.plannedCost || 0)} €</td>
+      <td class="text-right">${m.actualHours || 0} h</td>
+      <td class="text-right">${fmt(m.actualCost || 0)} €</td>
+      <td class="text-center">${badge}</td>
+    </tr>`;
+  }).join('');
+
+  return header + '<tbody>' + rows + '</tbody>';
+}
+
+function buildTaskTable(costBreakdown) {
+  if (!costBreakdown.length) return '';
+
+  const header = `<thead><tr>
+    <th>Aufgabe</th>
+    <th class="text-right">Geplante Std.</th>
+    <th class="text-right">Geplante Kosten</th>
+    <th>Zuweisungen</th>
+  </tr></thead>`;
+
+  const rows = costBreakdown.map(t => {
+    const assigns = (t.assignments || [])
+      .map(a => `${esc(a.shortName || a.userName)} [${a.percentage}% · ${a.hours}h · ${fmt(a.cost)} €]`)
+      .join('<br>');
+    return `<tr>
+      <td><strong>${esc(t.taskTitle)}</strong></td>
+      <td class="text-right">${t.plannedDuration} h</td>
+      <td class="text-right">${fmt(t.taskCost)} €</td>
+      <td style="font-size:.82rem;">${assigns || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  return header + '<tbody>' + rows + '</tbody>';
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmt(val) {
+  return Number(val || 0).toLocaleString('de-AT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML;
+}
+function setContent(html) {
+  document.getElementById('content-area').innerHTML = html;
+}
+function showError(msg) {
+  setContent(`<div class="alert alert-error">${esc(msg)}</div>`);
+}
+</script>
+</body>
+</html>

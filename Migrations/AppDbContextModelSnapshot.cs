@@ -348,9 +348,6 @@ namespace ProjectPlanner.Migrations
                     b.Property<decimal>("ActualDuration")
                         .HasColumnType("NUMBER(10,2)");
 
-                    b.Property<string>("AssigneeId")
-                        .HasColumnType("NVARCHAR2(450)");
-
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("TIMESTAMP(7)");
 
@@ -395,8 +392,6 @@ namespace ProjectPlanner.Migrations
                         .HasColumnType("NUMBER(5,2)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AssigneeId");
 
                     b.HasIndex("ProjectId");
 
@@ -685,18 +680,11 @@ namespace ProjectPlanner.Migrations
 
             modelBuilder.Entity("ProjectPlanner.Models.ProjectTask", b =>
                 {
-                    b.HasOne("ProjectPlanner.Models.AppUser", "Assignee")
-                        .WithMany()
-                        .HasForeignKey("AssigneeId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("ProjectPlanner.Models.Project", "Project")
                         .WithMany("Tasks")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Assignee");
 
                     b.Navigation("Project");
                 });
