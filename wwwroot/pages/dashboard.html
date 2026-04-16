@@ -60,6 +60,7 @@
     .panel-toggle { font-size:.8rem; color:var(--gray-600); cursor:pointer; background:none; border:none; padding:2px 8px; border-radius:4px; }
     .panel-toggle:hover { background:var(--gray-200); }
     .panel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.2rem; }
+    .panel-grid > * { min-width: 0; }
 
     /* Modals */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -350,12 +351,12 @@
           <div class="progress-bar-fill" style="width:${p.progress ?? 0}%; background:${p.color}"></div>
         </div>
 
-        <div class="project-actions" style="margin-top: 1.2rem; display: flex; align-items: center; gap: 0.4rem;">
-          <button class="btn btn-primary btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openGantt(${p.id})">📊 Gantt</button>
-          <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openCosts(${p.id})">💰 Kosten</button>
-          <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="exportProjectExcel(${p.id})">📊 XLS</button>
-          <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="exportProjectPdf(${p.id})">📄 PDF</button>
-          ${canManage ? `<button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openEdit(${p.id})">✏️ Edit</button>` : ''}
+        <div class="project-actions">
+          <button class="btn btn-primary btn-sm" onclick="openGantt(${p.id})">📊 Gantt</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCosts(${p.id})">💰 Kosten</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportProjectExcel(${p.id})">📊 XLS</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportProjectPdf(${p.id})">📄 PDF</button>
+          ${canManage ? `<button class="btn btn-ghost btn-sm" onclick="openEdit(${p.id})">✏️ Edit</button>` : ''}
         </div>
       </div>`;
     }).join('');
