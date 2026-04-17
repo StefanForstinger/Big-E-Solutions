@@ -8,17 +8,22 @@
     <link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body>
-  <nav class="navbar">
-    <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
-    <div class="navbar-right">
-<!--      <div style="display: flex; align-items: center; gap: 1rem; margin-right: 1rem;">-->
-<!--        <a href="/pages/user-management.html" class="btn btn-outline btn-sm" style="background: var(&#45;&#45;accent); color: white; border-color: var(&#45;&#45;accent);">👥 Benutzer</a>-->
-<!--      </div>-->
-      <span class="navbar-user" id="nav-user"></span>
-      <span class="role-badge" id="nav-role"></span>
-      <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
+<nav class="navbar">
+  <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
+  <div class="navbar-right">
+    <div id="admin-nav-link" style="display:none; gap:.4rem; margin-right:.75rem; align-items:center;">
+      <a href="/pages/user-management.html" class="btn-nav active">
+        <span class="nav-icon">👥</span> Benutzer
+      </a>
+      <a href="/pages/work-schedule.html" class="btn-nav">
+        <span class="nav-icon">⏱</span> Arbeitszeit
+      </a>
     </div>
-  </nav>
+    <span class="navbar-user" id="nav-user"></span>
+    <span class="role-badge" id="nav-role"></span>
+    <button class="btn btn-white btn-sm" onclick="logout()">Abmelden</button>
+  </div>
+</nav>
 
   <div class="container" style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
     <div class="page-header">
@@ -225,13 +230,66 @@
     .table tbody tr:hover {
       background: var(--gray-50);
     }
+    .btn-nav {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .38rem .85rem; border-radius: 6px;
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; white-space: nowrap;
+      background: rgba(255,255,255,.18);
+      color: var(--white);
+      border: 1.5px solid rgba(255,255,255,.55);
+      opacity: 1;
+      transition: background .2s, border-color .2s, box-shadow .2s;
+    }
+    .btn-nav:hover {
+      background: rgba(255,255,255,.30);
+      border-color: rgba(255,255,255,.85);
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      color: var(--white);
+    }
+    .btn-nav .nav-icon { font-size: 1rem; line-height: 1; opacity: 1; }
+    /* Aktive Seite: klar sichtbar, Akzentfarbe */
+    .btn-nav.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--white);
+      box-shadow: 0 2px 8px rgba(45,156,219,.45);
+    }
+    .btn-nav.active:hover {
+      background: var(--accent-dk);
+      border-color: var(--accent-dk);
+    }
   </style>
 
   <script src="/js/api.js"></script>
-  <script>
-    const currentRole = getUserRole();
-    let currentUserId = null;
-    let currentUserName = null;
+<script>
+  /* --- Logic & Auth --- */
+  if (!isLoggedIn()) window.location.href = '/index.html';
+  const currentRole = getUserRole();
+  const currentUser = getUser();
+  let allStudents = [];
+  let allProjects = [];
+
+  document.getElementById('nav-user').textContent = getUserName();
+  const roleEl = document.getElementById('nav-role');
+  roleEl.textContent = currentRole;
+  roleEl.className = 'role-badge role-' + currentRole.toLowerCase();
+
+  const elBtnNew     = document.getElementById('btn-new-project');
+  const elAdminPanel = document.getElementById('admin-panel');
+  const elNavLink    = document.getElementById('admin-nav-link');
+  const elTeacher    = document.getElementById('teacher-panel');
+
+  if (currentRole === 'Teacher' && elBtnNew)     elBtnNew.style.display = 'none';
+  if (currentRole === 'Admin') {
+    if (elAdminPanel) elAdminPanel.style.display = 'block';
+    if (elNavLink)    elNavLink.style.display    = 'flex';
+    loadAdminPanel();
+  }
+  if (currentRole === 'Teacher' || currentRole === 'Admin') {
+    if (elTeacher) elTeacher.style.display = 'block';
+    loadTeacherPanel();
+  }
 
     // // Check if user is admin and populate navbar
     async function checkAdmin() {
