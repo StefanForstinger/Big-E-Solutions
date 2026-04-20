@@ -275,22 +275,10 @@
   roleEl.textContent = currentRole;
   roleEl.className = 'role-badge role-' + currentRole.toLowerCase();
 
-  const elBtnNew     = document.getElementById('btn-new-project');
-  const elAdminPanel = document.getElementById('admin-panel');
-  const elNavLink    = document.getElementById('admin-nav-link');
-  const elTeacher    = document.getElementById('teacher-panel');
-
-  if (currentRole === 'Teacher' && elBtnNew)     elBtnNew.style.display = 'none';
-  if (currentRole === 'Admin') {
-    if (elAdminPanel) elAdminPanel.style.display = 'block';
-    if (elNavLink)    elNavLink.style.display    = 'flex';
-    loadAdminPanel();
+  const elNavLink = document.getElementById('admin-nav-link');
+  if (currentRole === 'Admin' && elNavLink) {
+    elNavLink.style.display = 'flex';
   }
-  if (currentRole === 'Teacher' || currentRole === 'Admin') {
-    if (elTeacher) elTeacher.style.display = 'block';
-    loadTeacherPanel();
-  }
-
     // // Check if user is admin and populate navbar
     async function checkAdmin() {
     //   const user = await fetchMe();
@@ -568,9 +556,11 @@
             }
         }
 
-        // Initialize
-        checkAdmin();
-        loadUsers();
-    </script>
+      // Initialize
+  // Initialize
+  (async () => {
+    await checkAdmin();
+    await loadUsers();
+  })();    </script>
 </body>
 </html>
