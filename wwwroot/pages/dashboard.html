@@ -102,9 +102,22 @@
   </style>
 </head>
 <body>
+<!-- MOBILE-FIX: Navbar mit Hamburger-Menü für Mobile -->
 <nav class="navbar">
-  <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
-  <div class="navbar-right">
+  <a href="/pages/dashboard.html" class="navbar-brand">
+    <span class="icon">🗓</span>
+    <span class="brand-text">Projektplaner</span>
+  </a>
+
+  <!-- MOBILE-FIX: Hamburger-Button — nur auf Mobile sichtbar (CSS: display:none auf Desktop) -->
+  <button class="hamburger" id="hamburger-btn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="navbar-right">
+    <span class="bar"></span>
+    <span class="bar"></span>
+    <span class="bar"></span>
+  </button>
+
+  <div class="navbar-right" id="navbar-right">
+    <!-- MOBILE-FIX: Admin-Links nehmen volle Breite auf Mobile (CSS) -->
     <div id="admin-nav-link" style="display:none; gap:.4rem; margin-right:.75rem; align-items:center;">
       <a href="/pages/user-management.html" class="btn-nav">
         <span class="nav-icon">👥</span> Benutzer
@@ -487,6 +500,39 @@
   function openCosts(id)  { window.location.href = `/pages/costs.html?projectId=${id}`; }
 
   loadProjects();
+</script>
+
+<script>
+  /* MOBILE-FIX: Hamburger-Menü Toggle */
+  (function() {
+    var btn = document.getElementById('hamburger-btn');
+    var menu = document.getElementById('navbar-right');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', function() {
+      var isOpen = menu.classList.toggle('open');
+      btn.classList.toggle('open', isOpen);
+      btn.setAttribute('aria-expanded', isOpen);
+    });
+
+    /* MOBILE-FIX: Menü schließen wenn außerhalb geklickt */
+    document.addEventListener('click', function(e) {
+      if (!btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    /* MOBILE-FIX: Menü bei Window-Resize zurücksetzen (Desktop → kein Drawer) */
+    window.addEventListener('resize', function() {
+      if (window.innerWidth > 768) {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
 </script>
 </body>
 </html>

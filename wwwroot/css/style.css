@@ -1,3 +1,8 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   PROJEKTPLANER — Mobile-Optimiertes Stylesheet
+   Breakpoints: 480px (Smartphone), 768px (Tablet)
+   ══════════════════════════════════════════════════════════════════════════ */
+
 /* ── Reset & CSS Variables ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -13,6 +18,7 @@
   --white:     #FFFFFF;
   --gray-100:  #F8FAFC;
   --gray-200:  #EEF2F7;
+  --gray-300:  #E2E8F0;
   --gray-400:  #CBD5E1;
   --gray-600:  #64748B;
   --gray-800:  #334155;
@@ -23,11 +29,22 @@
   --trans:     .2s ease;
 }
 
+/* ── Body — Kein horizontales Scrollen ────────────────────────────────────── */
+/* MOBILE-FIX: overflow-x verhindert horizontales Scrollen auf schmalen Screens */
 body {
   font-family: 'Segoe UI', Arial, sans-serif;
   background: var(--bg);
   color: var(--gray-800);
   min-height: 100vh;
+  overflow-x: hidden; /* MOBILE-FIX: Kein horizontaler Scroll */
+}
+
+/* ── Bilder responsiv ─────────────────────────────────────────────────────── */
+/* MOBILE-FIX: Alle Bilder passen sich automatisch an den Container an */
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* ── Typography ───────────────────────────────────────────────────────────── */
@@ -35,7 +52,8 @@ h1, h2, h3 { font-weight: 700; color: var(--navy); }
 h1 { font-size: 1.6rem; }
 h2 { font-size: 1.25rem; }
 h3 { font-size: 1rem; }
-p  { font-size: .95rem; line-height: 1.6; }
+/* MOBILE-FIX: Mindestens 16px Body-Text — verhindert Auto-Zoom auf iOS */
+p  { font-size: 1rem; line-height: 1.6; }
 
 /* ── Header / Navbar ──────────────────────────────────────────────────────── */
 .navbar {
@@ -45,10 +63,12 @@ p  { font-size: .95rem; line-height: 1.6; }
   background: var(--navy);
   color: var(--white);
   padding: .75rem 1.5rem;
-  height: 56px;
+  /* MOBILE-FIX: Höhe auf auto, damit Inhalt bei Wrap nicht abgeschnitten wird */
+  min-height: 56px;
+  height: auto;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 200;
   box-shadow: 0 2px 8px rgba(0,0,0,.2);
 }
 
@@ -60,10 +80,13 @@ p  { font-size: .95rem; line-height: 1.6; }
   font-weight: 700;
   color: var(--white);
   text-decoration: none;
+  /* MOBILE-FIX: Mindest-Tap-Target 44px */
+  min-height: 44px;
 }
 
 .navbar-brand .icon { font-size: 1.4rem; }
 
+/* Desktop: alle Nav-Items nebeneinander sichtbar */
 .navbar-right {
   display: flex;
   align-items: center;
@@ -76,6 +99,95 @@ p  { font-size: .95rem; line-height: 1.6; }
 }
 
 .navbar a { color: var(--white); text-decoration: none; }
+
+/* ── Hamburger-Button (nur auf Mobile sichtbar) ───────────────────────────── */
+/* MOBILE-FIX: Hamburger-Menü für die Navbar auf kleinen Screens */
+.hamburger {
+  display: none; /* Desktop: ausgeblendet */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  /* MOBILE-FIX: Touch-Target mind. 44×44px */
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background var(--trans);
+  flex-shrink: 0;
+}
+.hamburger:hover { background: rgba(255,255,255,.15); }
+
+.hamburger .bar {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--white);
+  border-radius: 2px;
+  transition: transform .25s ease, opacity .25s ease;
+}
+
+/* Hamburger → X Animation wenn Menü offen */
+.hamburger.open .bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open .bar:nth-child(2) { opacity: 0; }
+.hamburger.open .bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Mobile Nav-Drawer ────────────────────────────────────────────────────── */
+/* MOBILE-FIX: Mobile Nav fährt von oben ein wenn Hamburger geklickt */
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex; /* Hamburger auf Mobile anzeigen */
+  }
+
+  .navbar-right {
+    display: none; /* Desktop-Nav verstecken */
+    position: absolute;
+    top: 100%; /* direkt unter der Navbar */
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    background: var(--navy);
+    padding: .75rem 1.25rem 1rem;
+    gap: .5rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    z-index: 199;
+    border-top: 1px solid rgba(255,255,255,.1);
+  }
+
+  /* Menü öffnen wenn navbar-right die open-Klasse hat */
+  .navbar-right.open {
+    display: flex;
+  }
+
+  /* Admin-Nav-Links als eigene Zeile im Mobile-Menü */
+  #admin-nav-link {
+    display: flex !important;
+    flex-direction: column;
+    gap: .4rem;
+    margin-right: 0 !important;
+    width: 100%;
+  }
+
+  /* MOBILE-FIX: Alle Nav-Buttons auf volle Breite + 44px Tap-Target */
+  .navbar-right .btn,
+  .navbar-right .btn-nav,
+  .navbar-right .btn-white {
+    width: 100%;
+    justify-content: flex-start;
+    min-height: 44px;
+    padding: .65rem 1rem;
+    font-size: 1rem;
+  }
+
+  .navbar-user, .role-badge {
+    padding: .3rem 0;
+    font-size: .9rem;
+  }
+}
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 .btn {
@@ -90,6 +202,9 @@ p  { font-size: .95rem; line-height: 1.6; }
   cursor: pointer;
   transition: background var(--trans), transform var(--trans), box-shadow var(--trans);
   white-space: nowrap;
+  /* MOBILE-FIX: Touch-Target mind. 44px Höhe */
+  min-height: 44px;
+  touch-action: manipulation; /* MOBILE-FIX: 300ms Tap-Delay entfernen */
 }
 .btn:hover  { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
 .btn:active { transform: translateY(0); }
@@ -109,13 +224,15 @@ p  { font-size: .95rem; line-height: 1.6; }
 .btn-white    { background: var(--white); color: var(--navy); }
 .btn-white:hover    { background: var(--gray-100); }
 
+/* MOBILE-FIX: btn-sm ebenfalls 44px Tap-Target für Touch */
 .btn-sm {
-  padding: .3rem .65rem;
-  font-size: .78rem;
+  padding: .5rem .75rem;
+  font-size: .82rem;
   display: inline-flex;
   align-items: center;
   gap: 3px;
   line-height: 1.4;
+  min-height: 44px; /* MOBILE-FIX: Tap-Target */
 }
 .btn-lg { padding: .7rem 1.5rem; font-size: 1rem; }
 .btn-full { width: 100%; justify-content: center; }
@@ -124,7 +241,8 @@ p  { font-size: .95rem; line-height: 1.6; }
 .form-group { margin-bottom: 1rem; }
 .form-group label {
   display: block;
-  font-size: .85rem;
+  /* MOBILE-FIX: Label mind. 16px für Lesbarkeit */
+  font-size: 1rem;
   font-weight: 600;
   color: var(--gray-600);
   margin-bottom: .35rem;
@@ -137,14 +255,19 @@ input[type="date"],
 textarea,
 select {
   width: 100%;
-  padding: .6rem .85rem;
+  /* MOBILE-FIX: Padding erhöht → bessere Bedienbarkeit, mind. 44px Tap-Target */
+  padding: .75rem .85rem;
   border: 1.5px solid var(--gray-400);
   border-radius: 6px;
-  font-size: .95rem;
+  /* MOBILE-FIX: 16px verhindert Auto-Zoom auf iOS Safari */
+  font-size: 1rem;
   font-family: inherit;
   color: var(--gray-800);
   background: var(--white);
   transition: border-color var(--trans), box-shadow var(--trans);
+  touch-action: manipulation; /* MOBILE-FIX: Tap-Delay entfernen */
+  /* MOBILE-FIX: Kein horizontaler Overflow */
+  max-width: 100%;
 }
 input:focus, textarea:focus, select:focus {
   outline: none;
@@ -154,8 +277,9 @@ input:focus, textarea:focus, select:focus {
 
 textarea { resize: vertical; min-height: 80px; }
 
+/* MOBILE-FIX: form-row bricht bei 480px auf eine Spalte um */
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } } /* MOBILE-FIX: 480px Breakpoint */
 
 /* ── Cards ────────────────────────────────────────────────────────────────── */
 .card {
@@ -170,6 +294,9 @@ textarea { resize: vertical; min-height: 80px; }
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1rem;
+  /* MOBILE-FIX: Auf kleinen Screens umbrechen */
+  flex-wrap: wrap;
+  gap: .5rem;
 }
 
 /* ── Badge / Pill ─────────────────────────────────────────────────────────── */
@@ -190,7 +317,8 @@ textarea { resize: vertical; min-height: 80px; }
 .alert {
   padding: .7rem 1rem;
   border-radius: 6px;
-  font-size: .9rem;
+  /* MOBILE-FIX: mind. 16px */
+  font-size: 1rem;
   margin-top: .75rem;
   min-height: 1.2em;
 }
@@ -205,6 +333,7 @@ textarea { resize: vertical; min-height: 80px; }
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--dark) 0%, var(--navy) 100%);
+  /* MOBILE-FIX: Padding damit Box nicht an Bildschirmrand klebt */
   padding: 1rem;
 }
 
@@ -212,6 +341,7 @@ textarea { resize: vertical; min-height: 80px; }
   background: var(--white);
   border-radius: 14px;
   box-shadow: var(--shadow-lg);
+  /* MOBILE-FIX: Padding reduziert auf kleinen Screens (via Media Query unten) */
   padding: 2.4rem;
   width: 100%;
   max-width: 400px;
@@ -223,7 +353,8 @@ textarea { resize: vertical; min-height: 80px; }
 }
 .auth-logo .logo-icon { font-size: 2.5rem; }
 .auth-logo h1 { color: var(--navy); margin-top: .3rem; font-size: 1.5rem; }
-.auth-logo p  { color: var(--gray-600); font-size: .9rem; margin-top: .2rem; }
+/* MOBILE-FIX: mind. 16px */
+.auth-logo p  { color: var(--gray-600); font-size: 1rem; margin-top: .2rem; }
 
 /* Tabs */
 .tabs {
@@ -234,9 +365,10 @@ textarea { resize: vertical; min-height: 80px; }
   border-radius: 8px;
   padding: .3rem;
 }
+/* MOBILE-FIX: Tab-Buttons mind. 44px Tap-Target */
 .tab-btn {
   flex: 1;
-  padding: .5rem;
+  padding: .65rem .5rem;
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -245,6 +377,8 @@ textarea { resize: vertical; min-height: 80px; }
   color: var(--gray-600);
   cursor: pointer;
   transition: all var(--trans);
+  min-height: 44px; /* MOBILE-FIX: Tap-Target */
+  touch-action: manipulation;
 }
 .tab-btn.active {
   background: var(--white);
@@ -253,29 +387,31 @@ textarea { resize: vertical; min-height: 80px; }
 }
 
 /* ── Main Layout ──────────────────────────────────────────────────────────── */
+/* MOBILE-FIX: Padding reduziert auf kleinen Screens */
 .page-wrapper {
   max-width: 1200px;
   margin: 0 auto;
   padding: 1.8rem 1.5rem;
 }
 
+/* MOBILE-FIX: page-header stacked auf kleinen Screens */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap; /* MOBILE-FIX: umbrechen statt overflow */
+  gap: .75rem;
 }
 
 /* ── Project Grid ─────────────────────────────────────────────────────────── */
+/* MOBILE-FIX: minmax(280px → eine Spalte auf 360px-Screens) */
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.2rem;
 }
-/* Verhindert, dass Grid-Items breiter als ihre Zelle werden */
-.project-grid > * {
-  min-width: 0;
-}
+.project-grid > * { min-width: 0; }
 
 .project-card {
   background: var(--white);
@@ -286,11 +422,9 @@ textarea { resize: vertical; min-height: 80px; }
   display: flex;
   flex-direction: column;
   gap: .5rem;
-  /* Karte darf NICHT über ihre Grid-Zelle hinauswachsen */
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  /* visible statt hidden — sonst werden umbrechen-Inhalte abgeschnitten */
   overflow: visible;
   transition: box-shadow var(--trans), transform var(--trans);
 }
@@ -307,27 +441,24 @@ textarea { resize: vertical; min-height: 80px; }
 }
 .project-card-header h3 { color: var(--navy); font-size: 1rem; }
 
-.project-desc { font-size: .88rem; color: var(--gray-600); }
-.project-dates { font-size: .82rem; color: var(--gray-600); }
-.project-owner { font-size: .82rem; color: var(--gray-600); }
+/* MOBILE-FIX: mind. 16px für alle Card-Texte */
+.project-desc  { font-size: 1rem;   color: var(--gray-600); }
+.project-dates { font-size: .875rem; color: var(--gray-600); }
+.project-owner { font-size: .875rem; color: var(--gray-600); }
 
 .project-actions {
   display: flex;
-  flex-wrap: wrap;       /* MUSS umbrechen */
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  overflow: hidden;      /* Buttons die DOCH zu breit sind, werden hier abgefangen */
+  overflow: hidden;
   justify-content: flex-start;
   margin-top: 0.8rem;
-  padding-bottom: 2px;   /* Verhindert Clipping beim box-shadow der Buttons */
+  padding-bottom: 2px;
 }
-.project-actions .btn {
-  flex: 0 0 auto;        /* Buttons schrumpfen/wachsen NICHT */
-  white-space: nowrap;
-  min-width: 0;
-}
+.project-actions .btn       { flex: 0 0 auto; white-space: nowrap; min-width: 0; }
 .project-actions .btn-danger { flex: 0 0 auto; }
 
 .empty-state {
@@ -354,6 +485,7 @@ textarea { resize: vertical; min-height: 80px; }
   height: 100vh;
   overflow: hidden;
 }
+/* MOBILE-FIX: Gantt-Toolbar umbrechen auf kleinen Screens */
 .gantt-toolbar {
   display: flex;
   align-items: center;
@@ -361,12 +493,13 @@ textarea { resize: vertical; min-height: 80px; }
   background: var(--navy);
   color: var(--white);
   padding: .6rem 1.2rem;
-  gap: 1rem;
+  gap: .75rem;
   flex-shrink: 0;
+  flex-wrap: wrap; /* MOBILE-FIX: Buttons umbrechen */
 }
 .gantt-toolbar h2 { color: var(--white); font-size: 1rem; }
-.gantt-toolbar .toolbar-left  { display: flex; align-items: center; gap: 1rem; }
-.gantt-toolbar .toolbar-right { display: flex; align-items: center; gap: .5rem; }
+.gantt-toolbar .toolbar-left  { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.gantt-toolbar .toolbar-right { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .gantt-toolbar a  { color: rgba(255,255,255,.8); text-decoration: none; font-size: .9rem; }
 .gantt-toolbar a:hover { color: var(--white); }
 
@@ -381,7 +514,9 @@ textarea { resize: vertical; min-height: 80px; }
   z-index: 1000;
   align-items: center;
   justify-content: center;
+  /* MOBILE-FIX: Padding damit Modal nicht über Rand geht */
   padding: 1rem;
+  overflow-y: auto; /* MOBILE-FIX: Scrollbares Overlay bei langem Inhalt */
 }
 .modal-overlay.open { display: flex; }
 
@@ -392,6 +527,10 @@ textarea { resize: vertical; min-height: 80px; }
   padding: 1.8rem;
   width: 100%;
   max-width: 480px;
+  /* MOBILE-FIX: Modal scrollt wenn zu lang */
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: auto; /* MOBILE-FIX: Zentriert auch bei overflow-y:auto */
 }
 .modal-header {
   display: flex;
@@ -399,20 +538,30 @@ textarea { resize: vertical; min-height: 80px; }
   align-items: center;
   margin-bottom: 1.2rem;
 }
+/* MOBILE-FIX: Schließen-Button 44×44px Tap-Target */
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   cursor: pointer;
   color: var(--gray-600);
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  touch-action: manipulation;
 }
-.modal-close:hover { color: var(--red); }
+.modal-close:hover { color: var(--red); background: var(--gray-100); }
 .modal-footer {
   display: flex;
   gap: .75rem;
   justify-content: flex-end;
   margin-top: 1.4rem;
+  /* MOBILE-FIX: Buttons umbrechen auf sehr kleinen Screens */
+  flex-wrap: wrap;
 }
 
 /* ── Loading Spinner ──────────────────────────────────────────────────────── */
@@ -429,7 +578,8 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* ── Utility ──────────────────────────────────────────────────────────────── */
 .d-none { display: none !important; }
-.text-muted { color: var(--gray-600); font-size: .88rem; }
+/* MOBILE-FIX: mind. 16px */
+.text-muted { color: var(--gray-600); font-size: 1rem; }
 .mt-1 { margin-top: .5rem; }
 .mt-2 { margin-top: 1rem; }
 .gap-1 { gap: .5rem; }
@@ -448,3 +598,89 @@ textarea { resize: vertical; min-height: 80px; }
 .role-admin   { background: #fee2e2; color: #b91c1c; }
 .role-teacher { background: #fef3c7; color: #92400e; }
 .role-student { background: #dbeafe; color: #1e40af; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MEDIA QUERIES — Breakpoint 768px (Tablet)
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* MOBILE-FIX: Navbar erhält relative Position für absolutes Dropdown */
+  .navbar { position: sticky; }
+
+  /* MOBILE-FIX: Seiten-Padding reduzieren */
+  .page-wrapper { padding: 1.2rem 1rem; }
+
+  /* MOBILE-FIX: page-header vertikal stapeln */
+  .page-header { flex-direction: column; align-items: flex-start; }
+
+  /* MOBILE-FIX: Projekt-Grid eine Spalte */
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* MOBILE-FIX: Modal nimmt fast volle Breite */
+  .modal { padding: 1.2rem; }
+
+  /* MOBILE-FIX: Modal-Footer Buttons volle Breite */
+  .modal-footer .btn { flex: 1; }
+
+  /* MOBILE-FIX: Gantt-Toolbar kompakter */
+  .gantt-toolbar { padding: .5rem .75rem; }
+  .gantt-toolbar h2 { font-size: .9rem; }
+
+  /* MOBILE-FIX: Auth-Box weniger Padding */
+  .auth-box { padding: 1.5rem 1.2rem; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MEDIA QUERIES — Breakpoint 480px (Smartphone)
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  /* MOBILE-FIX: h1 kleiner damit es nicht umbrechen muss */
+  h1 { font-size: 1.3rem; }
+  h2 { font-size: 1.1rem; }
+
+  /* MOBILE-FIX: Seiten-Padding minimal */
+  .page-wrapper { padding: 1rem .75rem; }
+
+  /* MOBILE-FIX: Auth-Box nimmt volle Breite */
+  .auth-box { padding: 1.2rem 1rem; border-radius: 10px; }
+
+  /* MOBILE-FIX: Karten bekommen weniger Padding → mehr Inhalt sichtbar */
+  .card, .project-card, .new-project-form { padding: 1rem; }
+
+  /* MOBILE-FIX: Buttons in page-header volle Breite */
+  .page-header > div:last-child { width: 100%; }
+  .page-header > div:last-child .btn { flex: 1; justify-content: center; }
+
+  /* MOBILE-FIX: form-row auf 480px einspaltig */
+  .form-row { grid-template-columns: 1fr; }
+
+  /* MOBILE-FIX: Gantt Toolbar zweizeilig */
+  .gantt-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .5rem;
+  }
+  .gantt-toolbar .toolbar-left,
+  .gantt-toolbar .toolbar-right {
+    width: 100%;
+  }
+
+  /* MOBILE-FIX: Modal fast Vollbild */
+  .modal {
+    padding: 1rem;
+    border-radius: 8px;
+    max-height: 85vh;
+  }
+
+  /* MOBILE-FIX: project-actions Buttons etwas größer für Touch */
+  .project-actions .btn-sm {
+    padding: .5rem .7rem;
+    font-size: .82rem;
+  }
+
+  /* MOBILE-FIX: Navbar-Brand kürzer */
+  .navbar-brand .brand-text { display: none; } /* Optional: nur Icon zeigen */
+}
