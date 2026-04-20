@@ -172,7 +172,13 @@
 <!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
 <nav class="navbar">
   <a href="/pages/dashboard.html" class="navbar-brand"><span class="icon">🗓</span> Projektplaner</a>
-  <div class="navbar-right">
+  <!-- MOBILE-FIX: Hamburger-Button für Mobile -->
+  <button class="hamburger" id="hamburger-btn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="navbar-right">
+    <span class="bar"></span>
+    <span class="bar"></span>
+    <span class="bar"></span>
+  </button>
+  <div class="navbar-right" id="navbar-right">
     <div id="admin-nav-links" style="display:none; gap:.4rem; margin-right:.75rem; align-items:center;">
       <a href="/pages/user-management.html" class="btn-nav">
         <span class="nav-icon">👥</span> Benutzer
@@ -616,6 +622,34 @@
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('modal-overlay')) closeModal();
   });
+</script>
+
+<script>
+  /* MOBILE-FIX: Hamburger-Menü Toggle */
+  (function() {
+    var btn = document.getElementById('hamburger-btn');
+    var menu = document.getElementById('navbar-right');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function() {
+      var isOpen = menu.classList.toggle('open');
+      btn.classList.toggle('open', isOpen);
+      btn.setAttribute('aria-expanded', isOpen);
+    });
+    document.addEventListener('click', function(e) {
+      if (!btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    window.addEventListener('resize', function() {
+      if (window.innerWidth > 768) {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
 </script>
 </body>
 </html>
