@@ -125,6 +125,7 @@ var rateLimitStore = new Dictionary<string, List<DateTime>>();
 builder.Services.AddSingleton(rateLimitStore);
 
 var app = builder.Build();
+app.UseResponseCompression();
 
 // ─────────────────────────────────────────────
 // 🚦 MIDDLEWARE
