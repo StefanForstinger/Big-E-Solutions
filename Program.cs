@@ -7,8 +7,7 @@ using ProjectPlanner.Middleware;
 using ProjectPlanner.Models;
 using ProjectPlanner.Services;
 using System.Text;
-
-// 🔥 .env laden
+//  .env laden
 DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,9 +34,22 @@ if (string.IsNullOrEmpty(connectionString))
 // 🛢 DATABASE
 // ─────────────────────────────────────────────
 
+var dbProvider = Environment.GetEnvironmentVariable("DB_PROVIDER") ?? "oracle";
+
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseOracle(connectionString,
-        b => b.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19)));
+{
+    switch (dbProvider.ToLower())
+    {
+        case "mysql":
+            opt.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+            break;
+        case "oracle":
+        default:
+            opt.UseOracle(connectionString,
+                b => b.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19));
+            break;
+    }
+});
 
 // ─────────────────────────────────────────────
 // 👤 IDENTITY
@@ -107,13 +119,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("CorsPolicy", policy =>
     {
         if (origins.Length > 0)
-            policy.WithOrigins(origins);
+        policy.WithOrigins(origins);
         else
-            policy.AllowAnyOrigin(); // fallback (nur dev!)
-
-        policy.AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        policy.AllowAnyOrigin().DisallowCredentials(); // can't combine with AllowCredentials()
     });
 });
 

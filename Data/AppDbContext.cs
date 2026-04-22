@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using ProjectPlanner.Models;
 
 namespace ProjectPlanner.Data;
-
+//Falls ihr die Datenbank über den Builder erstellen müsst nur zur Info
+//die modelle wurden für oracle gebaut also falls ihr das ganze zum laufen
+//bringen wollt müsst ihr zuerst die models umbauen
 public class AppDbContext : IdentityDbContext<AppUser>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
